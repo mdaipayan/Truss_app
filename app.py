@@ -77,7 +77,8 @@ with col1:
                 fig.write_image(image_file) 
             
             # 2. Generate the word document once
-            generate_report(ts_solved, image_path=image_file)
+            # Pass the 'fig' object directly. Let report_gen handle the saving!
+                generate_report(ts_solved, fig=fig)
             
             # 3. Provide the download button
             with open("Analysis_Report.docx", "rb") as f:
@@ -175,4 +176,5 @@ with col2:
     fig.update_layout(yaxis=dict(scaleanchor="x", scaleratio=1), showlegend=True)
     st.session_state['current_fig'] = fig
     st.plotly_chart(fig, width='stretch')
+
     
