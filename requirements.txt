@@ -3,5 +3,4 @@ numpy
 pandas
 plotly
 python-docx
-kaleido==0.2.1
-
+kaleido==0.1.0post1
