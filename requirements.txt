@@ -1,6 +1,6 @@
-streamlit
-numpy
-pandas
-plotly
-python-docx
-kaleido==0.1.0post1
+streamlit>=1.35.0
+numpy>=2.1.0
+pandas>=2.2.0
+plotly>=5.24.0
+python-docx>=1.1.0
+kaleido==0.2.1
