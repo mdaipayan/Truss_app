@@ -3,4 +3,5 @@ numpy
 pandas
 plotly
 python-docx
+chromium-browser
 kaleido
