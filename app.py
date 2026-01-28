@@ -122,8 +122,19 @@ with col2:
             ))
             
             fig.add_annotation(
-                x=mid_x, y=mid_y, text=label, showarrow=False,
-                textangle=-angle_deg, yshift=12, font=dict(color=color, size=11)
+                x=mid_x, 
+                y=mid_y,
+                text=label,
+                showarrow=False,
+                textangle=-angle_deg,
+                # Change yshift to 20 or 25 to push the text away from the line
+                yshift=25, 
+                font=dict(color=color, size=11),
+                # Add a background box to make the text "pop"
+                bgcolor="rgba(255, 255, 255, 0.8)",
+                bordercolor=color,
+                borderwidth=1,
+                borderpad=2
             )
 
         for node in ts.nodes:
@@ -143,3 +154,4 @@ with col2:
     fig.update_layout(yaxis=dict(scaleanchor="x", scaleratio=1), showlegend=True)
     st.session_state['current_fig'] = fig
     st.plotly_chart(fig, use_container_width=True)
+
