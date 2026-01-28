@@ -120,7 +120,18 @@ with col2:
                 x=[mbr.node_i.x, mbr.node_j.x], y=[mbr.node_i.y, mbr.node_j.y],
                 mode='lines+markers', line=dict(color=color, width=4), showlegend=False
             ))
-            
+            # Label each Member with its ID (e.g., M1, M2)
+            fig.add_annotation(
+                x=mid_x, y=mid_y,
+                text=f"<i>M{mbr.id}</i>",
+                showarrow=False,
+                textangle=-angle_deg,
+                yshift=-20, # Shifted downward so force stays on top and ID stays on bottom
+                font=dict(color="black", size=10),
+                bgcolor="rgba(255, 255, 255, 0.5)"
+            )
+                      
+            # Label Forces
             fig.add_annotation(
                 x=mid_x, 
                 y=mid_y,
@@ -151,7 +162,20 @@ with col2:
                     name=f"Support @ Node {node.id}"
                 ))
 
+                # Label each Node with its ID
+                fig.add_annotation(
+                    x=node.x, y=node.y,
+                    text=f"<b>{node.id}</b>",
+                    showarrow=False,
+                    xshift=10, yshift=10,
+                    font=dict(color="black", size=12),
+                    bgcolor="white",
+                    bordercolor="black",
+                    borderwidth=1
+                )
+
     fig.update_layout(yaxis=dict(scaleanchor="x", scaleratio=1), showlegend=True)
     st.session_state['current_fig'] = fig
     st.plotly_chart(fig, use_container_width=True)
+
 
