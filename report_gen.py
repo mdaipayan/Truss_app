@@ -11,7 +11,7 @@ def save_truss_plot(fig, filename):
     """
     try:
         # engine="kaleido" is the key fix for your GitHub/Streamlit deployment
-        fig.write_image(filename, engine="kaleido", format="png", width=1000, height=800)
+        fig.write_image(filename, engine="kaleido", format="png", scale=3, width=1000, height=800)
         return True
     except Exception as e:
         st.error(f"Kaleido Export Error: {e}")
@@ -99,3 +99,4 @@ def generate_report(truss_system, fig=None):
         row[2].text = "Compressive" if f < 0 else "Tensile"
 
     doc.save("Analysis_Report.docx")
+
