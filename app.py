@@ -389,7 +389,7 @@ with col2:
                         font=dict(color="gray", size=10), bgcolor="white"
                     )
 
-            # Draw Nodes and Support Reactions
+           # Draw Nodes and Support Reactions
             for node in ts.nodes:
                 # Add stylish node joints
                 fig_res.add_trace(go.Scatter(
@@ -398,14 +398,30 @@ with col2:
                     showlegend=False
                 ))
                 
-                # Add Reaction Arrows
-                if node.rx or node.ry:
-                    rx_kn, ry_kn = round(node.rx_val/1000, 1), round(node.ry_val/1000, 1)
+                # Add Reaction Arrows Separately (Horizontal & Vertical)
+                if node.rx:
+                    rx_kn = round(node.rx_val / 1000, 2)
+                    # If reaction is positive (pushing right), arrow comes from the left (ax < 0)
+                    # If negative (pushing left), arrow comes from the right (ax > 0)
+                    ax_val = -50 if rx_kn >= 0 else 50
                     fig_res.add_annotation(
                         x=node.x, y=node.y, 
-                        text=f"<b>R:</b> {rx_kn}kN, {ry_kn}kN",
+                        text=f"<b>Rx: {abs(rx_kn)} kN</b>",
                         showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=3, 
-                        arrowcolor="darkgreen", ax=0, ay=50, 
+                        arrowcolor="darkgreen", ax=ax_val, ay=0, 
+                        font=dict(color="white", size=11), bgcolor="darkgreen"
+                    )
+                    
+                if node.ry:
+                    ry_kn = round(node.ry_val / 1000, 2)
+                    # If reaction is positive (pushing up), arrow comes from below (ay > 0)
+                    # If negative (pushing down), arrow comes from above (ay < 0)
+                    ay_val = 50 if ry_kn >= 0 else -50
+                    fig_res.add_annotation(
+                        x=node.x, y=node.y, 
+                        text=f"<b>Ry: {abs(ry_kn)} kN</b>",
+                        showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=3, 
+                        arrowcolor="darkgreen", ax=0, ay=ay_val, 
                         font=dict(color="white", size=11), bgcolor="darkgreen"
                     )
 
@@ -491,3 +507,4 @@ if 'solved_truss' in st.session_state:
             
             st.write("**Active Force Vector ($F_f$):**")
             st.write(ts.F_reduced)
+
