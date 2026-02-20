@@ -229,21 +229,25 @@ with col2:
     # TAB 1: BASE MODEL
     # ---------------------------------------------------------
     with tab1:
-        # Pass the scale and unit into the geometry drawing function
-        fig_base, node_errors, member_errors, load_errors = draw_undeformed_geometry(node_df, member_df, load_df, scale_factor=current_scale, unit_label=current_unit)
-        
-        # Display Pedagogical Warnings for any detected typing errors
-        if node_errors:
-            st.warning(f"⚠️ **Geometry Warning:** Invalid data at Node row(s): {', '.join(node_errors)}. Please ensure coordinates are numbers.")
-        if member_errors:
-            st.warning(f"⚠️ **Connectivity Warning:** Cannot draw {', '.join(member_errors)}. Ensure Node IDs exist and are numbers.")
-        if load_errors:
-            st.warning(f"⚠️ **Loads Warning:** Invalid data at Loads table row(s): {', '.join(load_errors)}.")
+        if node_df.empty:
+            # Show a friendly educational prompt instead of a blank collapsed graph
+            st.info("👈 Start adding nodes in the Input Table (or click 'Load Benchmark Data') to build your geometry canvas.")
+        else:
+            # Pass the scale and unit into the geometry drawing function
+            fig_base, node_errors, member_errors, load_errors = draw_undeformed_geometry(node_df, member_df, load_df, scale_factor=current_scale, unit_label=current_unit)
+            
+            # Display Pedagogical Warnings for any detected typing errors
+            if node_errors:
+                st.warning(f"⚠️ **Geometry Warning:** Invalid data at Node row(s): {', '.join(node_errors)}. Please ensure coordinates are numbers.")
+            if member_errors:
+                st.warning(f"⚠️ **Connectivity Warning:** Cannot draw {', '.join(member_errors)}. Ensure Node IDs exist and are numbers.")
+            if load_errors:
+                st.warning(f"⚠️ **Loads Warning:** Invalid data at Loads table row(s): {', '.join(load_errors)}.")
 
-        # Save base figure for Word Report
+            # Save base figure for Word Report
             st.session_state['base_fig'] = fig_base 
             
-        # Render the chart
+            # Render the chart
             st.plotly_chart(fig_base, use_container_width=True)
 
     # ---------------------------------------------------------
@@ -333,4 +337,5 @@ if 'solved_truss' in st.session_state:
             
             st.write("**Active Force Vector ($F_f$):**")
             st.write(ts.F_reduced)
+
 
