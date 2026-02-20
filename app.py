@@ -32,6 +32,10 @@ current_scale, current_unit = unit_map[force_display]
 
 # Persistent figure initialization
 fig = go.Figure()
+def clear_results():
+    """Clears the solved state if the user modifies input data."""
+    if 'solved_truss' in st.session_state:
+        del st.session_state['solved_truss']
 col1, col2 = st.columns([1, 2])
 
 with col1:
@@ -337,5 +341,6 @@ if 'solved_truss' in st.session_state:
             
             st.write("**Active Force Vector ($F_f$):**")
             st.write(ts.F_reduced)
+
 
 
