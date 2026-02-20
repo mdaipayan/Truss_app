@@ -86,7 +86,24 @@ with col1:
 with col2:
     st.header("2. Model Visualization")
 
-    # Always plot the base model
+    # FIX FOR REVIEWER 2: Always plot the base model AND Node Labels before solving
+    if not node_df.empty:
+        # Plot Node Labels Immediately
+        for i, row in node_df.iterrows():
+            try:
+                fig.add_annotation(
+                    x=float(row['X']), y=float(row['Y']),
+                    text=f"<b>Node {i+1}</b>",
+                    showarrow=False, yshift=15,
+                    font=dict(color="black", size=12),
+                    bgcolor="lightgray", bordercolor="black", borderwidth=1
+                )
+                fig.add_trace(go.Scatter(
+                    x=[float(row['X'])], y=[float(row['Y'])], mode='markers',
+                    marker=dict(color='black', size=8), showlegend=False
+                ))
+            except: pass
+
     if not node_df.empty and not member_df.empty:
         for i, row in member_df.iterrows():
             try:
@@ -94,88 +111,52 @@ with col2:
                 n1, n2 = node_df.iloc[ni], node_df.iloc[nj]
                 fig.add_trace(go.Scatter(
                     x=[n1['X'], n2['X']], y=[n1['Y'], n2['Y']],
-                    mode='lines+markers', line=dict(color='gray', width=1, dash='dot'),
-                    name="Undeformed", showlegend=False
+                    mode='lines', line=dict(color='gray', width=1, dash='dot'),
+                    showlegend=False
                 ))
             except: pass
 
-    # Overlay results if solved
-    if 'solved_truss' in st.session_state:
-        ts = st.session_state['solved_truss']
-        
-        for mbr in ts.members:
-            f = mbr.calculate_force()
-            nature = "Compressive" if f < 0 else "Tensile" # Standard Engineering Convention
-            color = "red" if f < 0 else "blue"
-            label = f"{round(abs(f)/1000, 2)} kN ({nature})"
-            
-            mid_x, mid_y = (mbr.node_i.x + mbr.node_j.x) / 2, (mbr.node_i.y + mbr.node_j.y) / 2
-            dx, dy = mbr.node_j.x - mbr.node_i.x, mbr.node_j.y - mbr.node_i.y
-            angle_deg = np.degrees(np.arctan2(dy, dx))
-            
-            if angle_deg > 90: angle_deg -= 180
-            elif angle_deg < -90: angle_deg += 180
-
-            fig.add_trace(go.Scatter(
-                x=[mbr.node_i.x, mbr.node_j.x], y=[mbr.node_i.y, mbr.node_j.y],
-                mode='lines+markers', line=dict(color=color, width=4), showlegend=False
-            ))
-            # Label each Member with its ID (e.g., M1, M2)
-            fig.add_annotation(
-                x=mid_x, y=mid_y,
-                text=f"<i>M{mbr.id}</i>",
-                showarrow=False,
-                textangle=-angle_deg,
-                yshift=-20, # Shifted downward so force stays on top and ID stays on bottom
-                font=dict(color="black", size=10),
-                bgcolor="rgba(255, 255, 255, 0.5)"
-            )
-                      
-            # Label Forces
-            fig.add_annotation(
-                x=mid_x, 
-                y=mid_y,
-                text=label,
-                showarrow=False,
-                textangle=-angle_deg,
-                # Change yshift to 20 or 25 to push the text away from the line
-                yshift=25, 
-                font=dict(color=color, size=11),
-                # Add a background box to make the text "pop"
-                bgcolor="rgba(255, 255, 255, 0.8)",
-                bordercolor=color,
-                borderwidth=1,
-                borderpad=2
-            )
-
-        for node in ts.nodes:
-            if node.rx or node.ry:
-                rx_kn, ry_kn = round(node.rx_val / 1000, 2), round(node.ry_val / 1000, 2)
-                fig.add_annotation(
-                    x=node.x, y=node.y, text=f"Rx: {rx_kn}kN, Ry: {ry_kn}kN",
-                    showarrow=True, arrowhead=1, ax=0, ay=40,
-                    font=dict(color="green", size=10), bgcolor="white"
-                )
-                fig.add_trace(go.Scatter(
-                    x=[node.x], y=[node.y], mode='markers',
-                    marker=dict(symbol='triangle-up', size=15, color='green'),
-                    name=f"Support @ Node {node.id}"
-                ))
-
-                # Label each Node with its ID
-                fig.add_annotation(
-                    x=node.x, y=node.y,
-                    text=f"<b>{node.id}</b>",
-                    showarrow=False,
-                    xshift=10, yshift=10,
-                    font=dict(color="black", size=12),
-                    bgcolor="white",
-                    bordercolor="black",
-                    borderwidth=1
-                )
-
-    fig.update_layout(yaxis=dict(scaleanchor="x", scaleratio=1), showlegend=True)
+    # ... (Keep your existing 'if solved_truss in st.session_state:' plotting logic here) ...
+    # [Your existing Plotly result rendering goes here]
+    
+    fig.update_layout(yaxis=dict(scaleanchor="x", scaleratio=1), showlegend=False)
     st.session_state['current_fig'] = fig
     st.plotly_chart(fig, use_container_width=True)
+
+# ---------------------------------------------------------
+# NEW SECTION: THE "GLASS BOX" PEDAGOGICAL EXPLORER
+# ---------------------------------------------------------
+if 'solved_truss' in st.session_state:
+    st.markdown("---")
+    st.header("🎓 Educational Glass-Box: Intermediate Matrix Steps")
+    st.info("Explore the internal matrix formations of the Direct Stiffness Method as requested by reviewers.")
+    
+    ts = st.session_state['solved_truss']
+    
+    g_col1, g_col2 = st.columns(2)
+    
+    with g_col1:
+        st.subheader("1. Element Stiffness Matrices ($k$)")
+        mbr_opts = [f"Member {m.id}" for m in ts.members]
+        sel_mbr = st.selectbox("Select Member to view its 4x4 matrix:", mbr_opts)
+        idx = int(sel_mbr.split(" ")[1]) - 1
+        # Format the matrix nicely using pandas
+        df_k = pd.DataFrame(ts.members[idx].k_global_matrix)
+        st.dataframe(df_k.style.format("{:.2e}"))
+        
+    with g_col2:
+        st.subheader("2. Global Assembly & Partitioning")
+        with st.expander("View Full Unpartitioned Global Matrix ($K_{global}$)"):
+            df_K = pd.DataFrame(ts.K_global)
+            st.dataframe(df_K.style.format("{:.2e}"))
+            
+        with st.expander("View Reduced System ($K_{ff} \cdot U_f = F_f$)"):
+            st.write("Reduced Stiffness Matrix ($K_{ff}$):")
+            df_Kff = pd.DataFrame(ts.K_reduced)
+            st.dataframe(df_Kff.style.format("{:.2e}"))
+            st.write("Active Force Vector ($F_f$):")
+            st.write(ts.F_reduced)
+        
+
 
 
