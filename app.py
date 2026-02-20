@@ -85,44 +85,146 @@ with col1:
  
 with col2:
     st.header("2. Model Visualization")
+    
+    # Create two separate tabs for better pedagogical clarity
+    tab1, tab2 = st.tabs(["🏗️ Undeformed Geometry", "📊 Structural Forces (Results)"])
 
-    # FIX FOR REVIEWER 2: Always plot the base model AND Node Labels before solving
-    if not node_df.empty:
-        # Plot Node Labels Immediately
-        for i, row in node_df.iterrows():
-            try:
-                fig.add_annotation(
-                    x=float(row['X']), y=float(row['Y']),
-                    text=f"<b>Node {i+1}</b>",
-                    showarrow=False, yshift=15,
-                    font=dict(color="black", size=12),
-                    bgcolor="lightgray", bordercolor="black", borderwidth=1
-                )
-                fig.add_trace(go.Scatter(
-                    x=[float(row['X'])], y=[float(row['Y'])], mode='markers',
-                    marker=dict(color='black', size=8), showlegend=False
-                ))
-            except: pass
+    # ---------------------------------------------------------
+    # TAB 1: BASE MODEL (Geometry, Node IDs, Member IDs)
+    # ---------------------------------------------------------
+    with tab1:
+        fig_base = go.Figure()
+        
+        # Plot Nodes and Node Labels
+        if not node_df.empty:
+            for i, row in node_df.iterrows():
+                try:
+                    fig_base.add_trace(go.Scatter(
+                        x=[float(row['X'])], y=[float(row['Y'])], 
+                        mode='markers+text',
+                        text=[f"<b>Node {i+1}</b>"], 
+                        textposition="top center",
+                        marker=dict(color='black', size=10), 
+                        showlegend=False
+                    ))
+                except: pass
 
-    if not node_df.empty and not member_df.empty:
-        for i, row in member_df.iterrows():
-            try:
-                ni, nj = int(row['Node_I'])-1, int(row['Node_J'])-1
-                n1, n2 = node_df.iloc[ni], node_df.iloc[nj]
-                fig.add_trace(go.Scatter(
-                    x=[n1['X'], n2['X']], y=[n1['Y'], n2['Y']],
-                    mode='lines', line=dict(color='gray', width=1, dash='dot'),
+        # Plot Members and Member IDs
+        if not node_df.empty and not member_df.empty:
+            for i, row in member_df.iterrows():
+                try:
+                    ni, nj = int(row['Node_I'])-1, int(row['Node_J'])-1
+                    n1, n2 = node_df.iloc[ni], node_df.iloc[nj]
+                    x0, y0, x1, y1 = n1['X'], n1['Y'], n2['X'], n2['Y']
+                    
+                    # Draw dashed line
+                    fig_base.add_trace(go.Scatter(
+                        x=[x0, x1], y=[y0, y1], 
+                        mode='lines', 
+                        line=dict(color='gray', width=2, dash='dash'), 
+                        showlegend=False
+                    ))
+                    
+                    # Add Member Label in the middle
+                    fig_base.add_annotation(
+                        x=(x0+x1)/2, y=(y0+y1)/2, 
+                        text=f"<b>M{i+1}</b>",
+                        showarrow=False, 
+                        bgcolor="white", bordercolor="gray", borderwidth=1
+                    )
+                except: pass
+                
+        fig_base.update_layout(
+            yaxis=dict(scaleanchor="x", scaleratio=1), 
+            margin=dict(l=0, r=0, t=30, b=0),
+            plot_bgcolor='white'
+        )
+        st.plotly_chart(fig_base, use_container_width=True)
+
+    # ---------------------------------------------------------
+    # TAB 2: RESULTS (Thick 3D-Style Lines, Vibrant Colors)
+    # ---------------------------------------------------------
+    with tab2:
+        if 'solved_truss' in st.session_state:
+            fig_res = go.Figure()
+            ts = st.session_state['solved_truss']
+            
+            # Plot Members with Forces
+            for mbr in ts.members:
+                f = mbr.calculate_force()
+                val_kn = round(abs(f)/1000, 2)
+                
+                # Setup Colors and Nature
+                if val_kn < 0.01:
+                    nature = "Zero-Force"
+                    color = "darkgray"
+                else:
+                    nature = "Compressive" if f < 0 else "Tensile"
+                    color = "crimson" if f < 0 else "royalblue"
+                
+                x0, y0, x1, y1 = mbr.node_i.x, mbr.node_i.y, mbr.node_j.x, mbr.node_j.y
+                mid_x, mid_y = (x0 + x1) / 2, (y0 + y1) / 2
+                
+                # Calculate angle for text alignment
+                dx, dy = x1 - x0, y1 - y0
+                angle_deg = np.degrees(np.arctan2(dy, dx))
+                if angle_deg > 90: angle_deg -= 180
+                elif angle_deg < -90: angle_deg += 180
+                
+                # Draw thick member (Gives a 3D structural tube effect)
+                fig_res.add_trace(go.Scatter(
+                    x=[x0, x1], y=[y0, y1], 
+                    mode='lines',
+                    line=dict(color=color, width=8), 
                     showlegend=False
                 ))
-            except: pass
+                
+                # Add High-Visibility Force Label
+                if val_kn >= 0.01: 
+                    label_html = f"<b>{val_kn} kN</b><br><i>{nature}</i>"
+                    fig_res.add_annotation(
+                        x=mid_x, y=mid_y, text=label_html, showarrow=False,
+                        textangle=-angle_deg, yshift=25, 
+                        font=dict(color=color, size=12),
+                        bgcolor="rgba(255,255,255,0.9)", 
+                        bordercolor=color, borderwidth=2, borderpad=3
+                    )
+                else:
+                    fig_res.add_annotation(
+                        x=mid_x, y=mid_y, text="0.0 kN", showarrow=False,
+                        font=dict(color="gray", size=10), bgcolor="white"
+                    )
 
-    # ... (Keep your existing 'if solved_truss in st.session_state:' plotting logic here) ...
-    # [Your existing Plotly result rendering goes here]
-    
-    fig.update_layout(yaxis=dict(scaleanchor="x", scaleratio=1), showlegend=False)
-    st.session_state['current_fig'] = fig
-    st.plotly_chart(fig, use_container_width=True)
+            # Draw Nodes and Support Reactions
+            for node in ts.nodes:
+                # Add stylish node joints
+                fig_res.add_trace(go.Scatter(
+                    x=[node.x], y=[node.y], mode='markers',
+                    marker=dict(color='black', size=12, line=dict(color='white', width=2)), 
+                    showlegend=False
+                ))
+                
+                # Add Reaction Arrows
+                if node.rx or node.ry:
+                    rx_kn, ry_kn = round(node.rx_val/1000, 1), round(node.ry_val/1000, 1)
+                    fig_res.add_annotation(
+                        x=node.x, y=node.y, 
+                        text=f"<b>R:</b> {rx_kn}kN, {ry_kn}kN",
+                        showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=3, 
+                        arrowcolor="darkgreen", ax=0, ay=50, 
+                        font=dict(color="white", size=11), bgcolor="darkgreen"
+                    )
 
+            fig_res.update_layout(
+                yaxis=dict(scaleanchor="x", scaleratio=1), 
+                plot_bgcolor='rgb(240, 242, 246)', # Soft gray background makes colors pop
+                margin=dict(l=0, r=0, t=30, b=0)
+            )
+            
+            st.session_state['current_fig'] = fig_res # Save the beautiful chart for the word report
+            st.plotly_chart(fig_res, use_container_width=True)
+        else:
+            st.info("👈 Input loads and click 'Calculate Results' to view the force diagram.")
 # ---------------------------------------------------------
 # NEW SECTION: THE "GLASS BOX" PEDAGOGICAL EXPLORER
 # ---------------------------------------------------------
@@ -187,6 +289,7 @@ if 'solved_truss' in st.session_state:
             
             st.write("**Active Force Vector ($F_f$):**")
             st.write(ts.F_reduced)
+
 
 
 
