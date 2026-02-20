@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 from core_solver import TrussSystem, Node, Member
 import datetime
 import os
+from visualizer import draw_undeformed_geometry, draw_results_fbd
 
 st.set_page_config(page_title="Professional Truss Suite", layout="wide")
 st.title("🏗️ Professional Truss Analysis Developed by D Mandal")
@@ -309,6 +310,7 @@ if 'solved_truss' in st.session_state:
             
             st.write("**Active Force Vector ($F_f$):**")
             st.write(ts.F_reduced)
+
 
 
 
