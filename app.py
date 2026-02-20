@@ -202,13 +202,13 @@ with col1:
         
         if st.button("🚀 Prepare Professional Report"):
             with st.spinner("Generating Professional Report..."):
-                # Use the figure from session state
-                current_fig = st.session_state.get('current_fig', fig)
+                # Get BOTH figures from session state
+                current_res_fig = st.session_state.get('current_fig', fig)
+                current_base_fig = st.session_state.get('base_fig', None)
                 
-                # Logic Fix: generate_report now handles Kaleido saving internally
-                generate_report(ts_solved, fig=current_fig)
+                # Pass BOTH figures and scaling data to the report generator
+                generate_report(ts_solved, fig_base=current_base_fig, fig_res=current_res_fig, scale_factor=current_scale, unit_label=current_unit)
                 
-                # Logic Fix: Verify file existence before opening to avoid FileNotFoundError
                 if os.path.exists("Analysis_Report.docx"):
                     with open("Analysis_Report.docx", "rb") as f:
                         st.download_button(
@@ -240,8 +240,11 @@ with col2:
         if load_errors:
             st.warning(f"⚠️ **Loads Warning:** Invalid data at Loads table row(s): {', '.join(load_errors)}.")
 
+        # Save base figure for Word Report
+            st.session_state['base_fig'] = fig_base 
+            
         # Render the chart
-        st.plotly_chart(fig_base, use_container_width=True)
+            st.plotly_chart(fig_base, use_container_width=True)
 
     # ---------------------------------------------------------
     # TAB 2: RESULTS (Free Body Diagram)
@@ -330,3 +333,4 @@ if 'solved_truss' in st.session_state:
             
             st.write("**Active Force Vector ($F_f$):**")
             st.write(ts.F_reduced)
+
