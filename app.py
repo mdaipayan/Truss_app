@@ -148,7 +148,8 @@ if 'solved_truss' in st.session_state:
         -cs & -s^2 & cs & s^2 
         \end{bmatrix}
         """)
-        st.markdown("Where $c = \cos(\theta) = \frac{\Delta x}{L}$ and $s = \sin(\theta) = \frac{\Delta y}{L}$[cite: 83].")
+        # Add the 'r' before the string so Python reads the LaTeX correctly
+        st.markdown(r"Where $c = \cos(\theta) = \frac{\Delta x}{L}$ and $s = \sin(\theta) = \frac{\Delta y}{L}$.")
         
         # Display the numerical output
         mbr_opts = [f"Member {m.id}" for m in ts.members]
@@ -186,6 +187,7 @@ if 'solved_truss' in st.session_state:
             
             st.write("**Active Force Vector ($F_f$):**")
             st.write(ts.F_reduced)
+
 
 
 
