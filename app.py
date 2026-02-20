@@ -89,32 +89,59 @@ with col2:
     # Create two separate tabs for better pedagogical clarity
     tab1, tab2 = st.tabs(["🏗️ Undeformed Geometry", "📊 Structural Forces (Results)"])
 
-    # ---------------------------------------------------------
-    # TAB 1: BASE MODEL (Geometry, Node IDs, Member IDs, Loads)
+   # ---------------------------------------------------------
+    # TAB 1: BASE MODEL (Geometry, Node IDs, Member IDs, Loads & Supports)
     # ---------------------------------------------------------
     with tab1:
         fig_base = go.Figure()
         
-        # 1. Plot Nodes and Node Labels
+        # 1. Plot Supports dynamically (Drawn first so they sit under the nodes)
         if not node_df.empty:
             for i, row in node_df.iterrows():
                 try:
+                    rx = int(row.get('Restrain_X', 0))
+                    ry = int(row.get('Restrain_Y', 0))
                     nx, ny = float(row['X']), float(row['Y'])
-                    fig_base.add_trace(go.Scatter(
-                        x=[nx], y=[ny], 
-                        mode='markers+text',
-                        text=[f"<b>Node {i+1}</b>"], 
-                        textposition="top center",
-                        marker=dict(color='black', size=10), 
-                        showlegend=False
-                    ))
+                    
+                    if rx == 1 and ry == 1:
+                        # PIN SUPPORT (Both X and Y Restrained)
+                        fig_base.add_trace(go.Scatter(
+                            x=[nx], y=[ny], mode='markers',
+                            marker=dict(symbol='triangle-up', size=20, color='forestgreen'),
+                            showlegend=False, hoverinfo='skip'
+                        ))
+                        fig_base.add_annotation(
+                            x=nx, y=ny, text="<b>Pin</b>", showarrow=False, yshift=-25,
+                            font=dict(color="forestgreen", size=11)
+                        )
+                    elif rx == 0 and ry == 1:
+                        # ROLLER SUPPORT (Y Restrained, X Free)
+                        fig_base.add_trace(go.Scatter(
+                            x=[nx], y=[ny], mode='markers',
+                            marker=dict(symbol='circle-open', size=18, color='forestgreen', line=dict(width=4)),
+                            showlegend=False, hoverinfo='skip'
+                        ))
+                        fig_base.add_annotation(
+                            x=nx, y=ny, text="<b>Roller</b>", showarrow=False, yshift=-25,
+                            font=dict(color="forestgreen", size=11)
+                        )
+                    elif rx == 1 and ry == 0:
+                        # ROLLER SUPPORT Vertical (X Restrained, Y Free)
+                        fig_base.add_trace(go.Scatter(
+                            x=[nx], y=[ny], mode='markers',
+                            marker=dict(symbol='square-open', size=18, color='forestgreen', line=dict(width=4)),
+                            showlegend=False, hoverinfo='skip'
+                        ))
+                        fig_base.add_annotation(
+                            x=nx, y=ny, text="<b>Roller (X-fixed)</b>", showarrow=False, xshift=-35,
+                            font=dict(color="forestgreen", size=11)
+                        )
                 except: pass
 
         # 2. Plot Members and Member IDs dynamically
         if not node_df.empty and not member_df.empty:
             for i, row in member_df.iterrows():
                 try:
-                    # Get node indices (subtract 1 because dataframe is 0-indexed but user inputs 1-indexed)
                     ni, nj = int(row['Node_I'])-1, int(row['Node_J'])-1
                     n1, n2 = node_df.iloc[ni], node_df.iloc[nj]
                     x0, y0, x1, y1 = float(n1['X']), float(n1['Y']), float(n2['X']), float(n2['Y'])
@@ -133,12 +160,27 @@ with col2:
                         text=f"<b>M{i+1}</b>",
                         showarrow=False,
                         font=dict(color="blue", size=11),
-                        bgcolor="rgba(255, 255, 255, 0.8)", # Slight transparent white background
+                        bgcolor="rgba(255, 255, 255, 0.8)", 
                         bordercolor="blue", borderwidth=1
                     )
                 except: pass
+                
+        # 3. Plot Nodes and Node Labels (Drawn on top of supports)
+        if not node_df.empty:
+            for i, row in node_df.iterrows():
+                try:
+                    nx, ny = float(row['X']), float(row['Y'])
+                    fig_base.add_trace(go.Scatter(
+                        x=[nx], y=[ny], 
+                        mode='markers+text',
+                        text=[f"<b>Node {i+1}</b>"], 
+                        textposition="top center",
+                        marker=dict(color='black', size=10), 
+                        showlegend=False
+                    ))
+                except: pass
         
-        # 3. Plot Load Arrows dynamically as soon as inputted
+        # 4. Plot Load Arrows dynamically
         if not node_df.empty and not load_df.empty:
             for i, row in load_df.iterrows():
                 try:
@@ -148,7 +190,6 @@ with col2:
                     # Handle Y-Direction Forces (Vertical)
                     fy = float(row.get('Force_Y (N)', 0))
                     if abs(fy) > 0:
-                        # If negative (downward), arrow comes from above. If positive (upward), arrow comes from below.
                         ay_val = -50 if fy > 0 else 50
                         fig_base.add_annotation(
                             x=nx, y=ny,
@@ -161,7 +202,6 @@ with col2:
                     # Handle X-Direction Forces (Horizontal)
                     fx = float(row.get('Force_X (N)', 0))
                     if abs(fx) > 0:
-                        # If positive (right), arrow comes from left. If negative (left), arrow comes from right.
                         ax_val = -50 if fx > 0 else 50
                         fig_base.add_annotation(
                             x=nx, y=ny,
@@ -326,6 +366,7 @@ if 'solved_truss' in st.session_state:
             
             st.write("**Active Force Vector ($F_f$):**")
             st.write(ts.F_reduced)
+
 
 
 
