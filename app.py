@@ -16,26 +16,58 @@ col1, col2 = st.columns([1, 2])
 with col1:
     st.header("1. Input Data")
     
+    # ---------------------------------------------------------
+    # NEW PEDAGOGICAL FEATURE: Load Benchmark Data Button
+    # ---------------------------------------------------------
+    st.info("💡 **First time here?** Load the benchmark 9-member Pratt truss to see how data is formatted.")
+    if st.button("📚 Load 9-Member Pratt Truss Benchmark"):
+        # Pre-fill Nodes (X, Y, Restrain_X, Restrain_Y)
+        st.session_state['nodes_data'] = pd.DataFrame([
+            [0.0, 0.0, 1, 1],  # Node 1: Origin, Pin Support
+            [3.0, 0.0, 0, 0],  # Node 2: Bottom Mid
+            [6.0, 0.0, 0, 1],  # Node 3: Bottom Right, Roller Support
+            [0.0, 3.0, 0, 0],  # Node 4: Top Left
+            [3.0, 3.0, 0, 0],  # Node 5: Top Mid
+            [6.0, 3.0, 0, 0]   # Node 6: Top Right
+        ], columns=["X", "Y", "Restrain_X", "Restrain_Y"])
+        
+        # Pre-fill Members (Node_I, Node_J, Area, E)
+        st.session_state['members_data'] = pd.DataFrame([
+            [1, 2, 0.01, 2e11],  # M1: Bottom Chord Left
+            [2, 3, 0.01, 2e11],  # M2: Bottom Chord Right
+            [4, 5, 0.01, 2e11],  # M3: Top Chord Left
+            [5, 6, 0.01, 2e11],  # M4: Top Chord Right
+            [1, 4, 0.01, 2e11],  # M5: End Vertical Left
+            [3, 6, 0.01, 2e11],  # M6: End Vertical Right
+            [2, 5, 0.01, 2e11],  # M7: Central Vertical
+            [2, 4, 0.01, 2e11],  # M8: Left Diagonal
+            [2, 6, 0.01, 2e11]   # M9: Right Diagonal
+        ], columns=["Node_I", "Node_J", "Area(sq.m)", "E (N/sq.m)"])
+        
+        # Pre-fill Loads (Node_ID, Force_X, Force_Y)
+        st.session_state['loads_data'] = pd.DataFrame([
+            [5, 0.0, -100000.0], # 100 kN downward at Node 5
+            [4, 10000.0, 0.0]    # 10 kN horizontal at Node 4
+        ], columns=["Node_ID", "Force_X (N)", "Force_Y (N)"])
+        
+        # Clear any previous solved states to reset the view
+        if 'solved_truss' in st.session_state:
+            del st.session_state['solved_truss']
+
+    # Initialize empty dataframes in session_state if they don't exist yet
+    if 'nodes_data' not in st.session_state:
+        st.session_state['nodes_data'] = pd.DataFrame(columns=["X", "Y", "Restrain_X", "Restrain_Y"])
+        st.session_state['members_data'] = pd.DataFrame(columns=["Node_I", "Node_J", "Area(sq.m)", "E (N/sq.m)"])
+        st.session_state['loads_data'] = pd.DataFrame(columns=["Node_ID", "Force_X (N)", "Force_Y (N)"])
+
     st.subheader("Nodes")
-    node_df = st.data_editor(
-        pd.DataFrame(columns=["X", "Y", "Restrain_X", "Restrain_Y"]), 
-        num_rows="dynamic", 
-        key="nodes"
-    )
+    node_df = st.data_editor(st.session_state['nodes_data'], num_rows="dynamic", key="nodes")
     
     st.subheader("Members")
-    member_df = st.data_editor(
-        pd.DataFrame(columns=["Node_I", "Node_J", "Area(sq.m)", "E (N/sq.m)"]), 
-        num_rows="dynamic", 
-        key="members"
-    )
+    member_df = st.data_editor(st.session_state['members_data'], num_rows="dynamic", key="members")
     
     st.subheader("Nodal Loads")
-    load_df = st.data_editor(
-        pd.DataFrame(columns=["Node_ID", "Force_X (N)", "Force_Y (N)"]), 
-        num_rows="dynamic", 
-        key="loads"
-    )
+    load_df = st.data_editor(st.session_state['loads_data'], num_rows="dynamic", key="loads")
     
     if st.button("Calculate Results"):
         try:
@@ -366,6 +398,7 @@ if 'solved_truss' in st.session_state:
             
             st.write("**Active Force Vector ($F_f$):**")
             st.write(ts.F_reduced)
+
 
 
 
