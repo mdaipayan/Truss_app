@@ -2,19 +2,19 @@ import numpy as np
 import math
 
 class Node:
-    def __init__(self, id, x, y, rx, ry):
+    def __init__(self, id: int, x: float, y: float, rx: int, ry: int):
         self.id = id
         self.x = x
         self.y = y
-        self.rx = rx  # 1 if restrained, 0 if free
+        self.rx = rx  
         self.ry = ry
-        self.ux = 0.0
-        self.uy = 0.0
-        self.rx_val = 0.0
-        self.ry_val = 0.0
+        self.ux: float = 0.0
+        self.uy: float = 0.0
+        self.rx_val: float = 0.0
+        self.ry_val: float = 0.0
 
 class Member:
-    def __init__(self, id, node_i, node_j, E, A):
+    def __init__(self, id: int, node_i: Node, node_j: Node, E: float, A: float):
         if E <= 0:
             raise ValueError(f"Member {id} has invalid Young's Modulus (E must be > 0).")
         if A <= 0:
@@ -144,4 +144,5 @@ class TrussSystem:
             node.ry_val = Reactions[2*node.id-1]
         
         return "Solved"
+
 
