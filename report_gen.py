@@ -17,9 +17,10 @@ def save_truss_plot(fig, filename):
         st.error(f"Kaleido Export Error: {e}")
         return False
 
-def generate_report(truss_system, fig=None):
+def generate_report(truss_system, fig_base=None, fig_res=None, scale_factor=1000.0, unit_label="kN"):
     doc = Document()
-    image_path = "temp_truss_plot.png"
+    image_base_path = "temp_base_plot.png"
+    image_res_path = "temp_res_plot.png"
     
     # 1. Header & Software Details
     doc.add_heading('Structural Analysis Report', 0)
@@ -57,18 +58,29 @@ def generate_report(truss_system, fig=None):
         row = mat_table.add_row().cells
         row[0].text, row[1].text, row[2].text = str(mbr.id), f"{mbr.A:.2e}", f"{mbr.E:.2e}"
 
-    # 3. Image Section (Integration of the Kaleido Fix)
-    if fig:
-        doc.add_heading('Truss Model Visualization', level=1)
-        if save_truss_plot(fig, image_path):
+    # 3. Image Section: Undeformed Geometry
+    if fig_base:
+        doc.add_heading('Undeformed Geometry Visualization', level=1)
+        if save_truss_plot(fig_base, image_base_path):
             try:
-                doc.add_picture(image_path, width=Inches(5.5))
+                doc.add_picture(image_base_path, width=Inches(5.5))
             except:
                 doc.add_paragraph("Error: Picture could not be embedded into the document.")
         else:
             doc.add_paragraph("Warning: Image generation failed due to environment constraints.")
 
-    # 4. Nodal Displacements Table
+    # 4. Image Section: Structural Forces (Results)
+    if fig_res:
+        doc.add_heading('Structural Forces Visualization', level=1)
+        if save_truss_plot(fig_res, image_res_path):
+            try:
+                doc.add_picture(image_res_path, width=Inches(5.5))
+            except:
+                doc.add_paragraph("Error: Picture could not be embedded into the document.")
+        else:
+            doc.add_paragraph("Warning: Image generation failed due to environment constraints.")
+
+    # 5. Nodal Displacements Table
     doc.add_heading('Nodal Displacements', level=1)
     disp_table = doc.add_table(rows=1, cols=3)
     disp_table.style = 'Table Grid'
@@ -82,21 +94,23 @@ def generate_report(truss_system, fig=None):
         row[1].text = f"{n.ux:.6e}"
         row[2].text = f"{n.uy:.6e}"
 
-    # 5. Results Table (Updated Sign Convention)
+    # 6. Results Table (Dynamic Units)
     doc.add_heading('Detailed Analysis Results', level=1)
     res_table = doc.add_table(rows=1, cols=3)
     res_table.style = 'Table Grid'
     res_table.rows[0].cells[0].text = 'Member'
-    res_table.rows[0].cells[1].text = 'Force (kN)'
+    res_table.rows[0].cells[1].text = f'Force ({unit_label})' # Uses dynamic unit label
     res_table.rows[0].cells[2].text = 'Nature'
 
     for mbr in truss_system.members:
         f = mbr.calculate_force()
         row = res_table.add_row().cells
         row[0].text = str(mbr.id)
-        row[1].text = str(round(abs(f)/1000, 2))
-        # Standard Convention: Negative is Compressive, Positive is Tensile
-        row[2].text = "Compressive" if f < 0 else "Tensile"
+        row[1].text = str(round(abs(f) / scale_factor, 2)) # Uses dynamic scale factor
+        
+        if abs(f) / scale_factor < 0.01:
+            row[2].text = "Zero-Force"
+        else:
+            row[2].text = "Compressive" if f < 0 else "Tensile"
 
     doc.save("Analysis_Report.docx")
-
