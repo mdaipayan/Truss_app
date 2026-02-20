@@ -125,8 +125,6 @@ with col1:
     st.subheader("Members")
     member_df = st.data_editor(st.session_state['members_data'], num_rows="dynamic", key="members")
 
-
-
     # --- Guide for Loads ---
     with st.expander("📘 Guide: How to apply External Loads"):
         st.markdown("""
@@ -484,6 +482,7 @@ if 'solved_truss' in st.session_state:
             
             st.write("**Active Force Vector ($F_f$):**")
             st.write(ts.F_reduced)
+
 
 
 
