@@ -99,4 +99,4 @@ class TrussSystem:
             node.ry_val = Reactions[2*node.id-1]
         
         return "Solved"
-        
+    
