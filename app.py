@@ -90,17 +90,18 @@ with col2:
     tab1, tab2 = st.tabs(["🏗️ Undeformed Geometry", "📊 Structural Forces (Results)"])
 
     # ---------------------------------------------------------
-    # TAB 1: BASE MODEL (Geometry, Node IDs, Member IDs)
+    # TAB 1: BASE MODEL (Geometry, Node IDs, Member IDs, Loads)
     # ---------------------------------------------------------
     with tab1:
         fig_base = go.Figure()
         
-        # Plot Nodes and Node Labels
+        # 1. Plot Nodes and Node Labels
         if not node_df.empty:
             for i, row in node_df.iterrows():
                 try:
+                    nx, ny = float(row['X']), float(row['Y'])
                     fig_base.add_trace(go.Scatter(
-                        x=[float(row['X'])], y=[float(row['Y'])], 
+                        x=[nx], y=[ny], 
                         mode='markers+text',
                         text=[f"<b>Node {i+1}</b>"], 
                         textposition="top center",
@@ -109,15 +110,16 @@ with col2:
                     ))
                 except: pass
 
-        # Plot Members and Member IDs
+        # 2. Plot Members and Member IDs dynamically
         if not node_df.empty and not member_df.empty:
             for i, row in member_df.iterrows():
                 try:
+                    # Get node indices (subtract 1 because dataframe is 0-indexed but user inputs 1-indexed)
                     ni, nj = int(row['Node_I'])-1, int(row['Node_J'])-1
                     n1, n2 = node_df.iloc[ni], node_df.iloc[nj]
-                    x0, y0, x1, y1 = n1['X'], n1['Y'], n2['X'], n2['Y']
+                    x0, y0, x1, y1 = float(n1['X']), float(n1['Y']), float(n2['X']), float(n2['Y'])
                     
-                    # Draw dashed line
+                    # Draw dashed line for the member
                     fig_base.add_trace(go.Scatter(
                         x=[x0, x1], y=[y0, y1], 
                         mode='lines', 
@@ -129,18 +131,53 @@ with col2:
                     fig_base.add_annotation(
                         x=(x0+x1)/2, y=(y0+y1)/2, 
                         text=f"<b>M{i+1}</b>",
-                        showarrow=False, 
-                        bgcolor="white", bordercolor="gray", borderwidth=1
+                        showarrow=False,
+                        font=dict(color="blue", size=11),
+                        bgcolor="rgba(255, 255, 255, 0.8)", # Slight transparent white background
+                        bordercolor="blue", borderwidth=1
                     )
                 except: pass
-                
+        
+        # 3. Plot Load Arrows dynamically as soon as inputted
+        if not node_df.empty and not load_df.empty:
+            for i, row in load_df.iterrows():
+                try:
+                    node_idx = int(row['Node_ID']) - 1
+                    nx, ny = float(node_df.iloc[node_idx]['X']), float(node_df.iloc[node_idx]['Y'])
+                    
+                    # Handle Y-Direction Forces (Vertical)
+                    fy = float(row.get('Force_Y (N)', 0))
+                    if abs(fy) > 0:
+                        # If negative (downward), arrow comes from above. If positive (upward), arrow comes from below.
+                        ay_val = -50 if fy > 0 else 50
+                        fig_base.add_annotation(
+                            x=nx, y=ny,
+                            ax=0, ay=ay_val, xref="x", yref="y", axref="pixel", ayref="pixel",
+                            text=f"<b>{abs(fy)/1000} kN</b>",
+                            showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2.5, arrowcolor="darkorange",
+                            font=dict(color="darkorange", size=11), bgcolor="white"
+                        )
+                        
+                    # Handle X-Direction Forces (Horizontal)
+                    fx = float(row.get('Force_X (N)', 0))
+                    if abs(fx) > 0:
+                        # If positive (right), arrow comes from left. If negative (left), arrow comes from right.
+                        ax_val = -50 if fx > 0 else 50
+                        fig_base.add_annotation(
+                            x=nx, y=ny,
+                            ax=ax_val, ay=0, xref="x", yref="y", axref="pixel", ayref="pixel",
+                            text=f"<b>{abs(fx)/1000} kN</b>",
+                            showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2.5, arrowcolor="darkorange",
+                            font=dict(color="darkorange", size=11), bgcolor="white"
+                        )
+                except: pass
+
         fig_base.update_layout(
             yaxis=dict(scaleanchor="x", scaleratio=1), 
             margin=dict(l=0, r=0, t=30, b=0),
             plot_bgcolor='white'
         )
         st.plotly_chart(fig_base, use_container_width=True)
-
     # ---------------------------------------------------------
     # TAB 2: RESULTS (Thick 3D-Style Lines, Vibrant Colors)
     # ---------------------------------------------------------
@@ -289,6 +326,7 @@ if 'solved_truss' in st.session_state:
             
             st.write("**Active Force Vector ($F_f$):**")
             st.write(ts.F_reduced)
+
 
 
 
