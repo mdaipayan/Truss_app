@@ -59,28 +59,34 @@ class TrussSystem:
         K_global = np.zeros((n_dof, n_dof))
         F_global = np.zeros(n_dof)
 
+        # 1. Populate Global Force Vector
         for dof, force in self.loads.items():
             F_global[dof] = force
 
+        # 2. Vectorized Global Matrix Assembly (FIX FOR CRITIQUE 2)
         for mbr in self.members:
             k = mbr.get_k_global()
+            # Define the specific degrees of freedom for this member
             dofs = [2*mbr.node_i.id-2, 2*mbr.node_i.id-1, 2*mbr.node_j.id-2, 2*mbr.node_j.id-1]
-            for i in range(4):
-                for j in range(4):
-                    K_global[dofs[i], dofs[j]] += k[i, j]
+            
+            # Use NumPy's advanced indexing to add the 4x4 matrix in one single operation 
+            # instead of using 16 individual loop iterations
+            K_global[np.ix_(dofs, dofs)] += k
 
-        self.K_global = K_global # NEW: Store Global Matrix
+        self.K_global = K_global # Store Global Matrix for Glass-Box
 
+        # 3. Boundary Condition Partitioning
         free_dofs = [2*n.id-2 for n in self.nodes if n.rx == 0] + [2*n.id-1 for n in self.nodes if n.ry == 0]
         free_dofs.sort()
-        self.free_dofs = free_dofs # NEW: Store partitioned indices
+        self.free_dofs = free_dofs 
         
         K_reduced = K_global[np.ix_(free_dofs, free_dofs)]
         F_reduced = F_global[free_dofs]
         
-        self.K_reduced = K_reduced # NEW: Store Reduced Matrix
+        self.K_reduced = K_reduced # Store Reduced Matrix for Glass-Box
         self.F_reduced = F_reduced
         
+        # 4. Solve for Displacements
         U_reduced = np.linalg.solve(K_reduced, F_reduced)
         
         for i, dof in enumerate(free_dofs):
@@ -88,6 +94,7 @@ class TrussSystem:
             if dof % 2 == 0: self.nodes[node_idx].ux = U_reduced[i]
             else: self.nodes[node_idx].uy = U_reduced[i]
         
+        # 5. Calculate Reactions: R = K*U - F
         U_all = np.zeros(n_dof) 
         for node in self.nodes:
             U_all[2*node.id-2] = node.ux
@@ -100,3 +107,4 @@ class TrussSystem:
         
         return "Solved"
     
+
