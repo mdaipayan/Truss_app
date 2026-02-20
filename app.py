@@ -97,10 +97,8 @@ with col1:
     st.subheader("Nodes")
     node_df = st.data_editor(st.session_state['nodes_data'], num_rows="dynamic", key="nodes")
 
-
-   # --- Guide for Members ---
+    # --- Guide for Members ---
     with st.expander("📘 Guide: How to connect Members & set Properties"):
-        # Notice the 'r' right before the triple quotes!
         st.markdown(r"""
         ### **Defining Truss Members**
         A truss is made of straight members connected at joints (nodes). Each member needs to know where it starts, where it ends, how thick it is, and what material it is made of.
@@ -128,7 +126,6 @@ with col1:
 
     # --- Guide for Loads ---
     with st.expander("📘 Guide: How to apply External Loads"):
-        # Notice the 'r' right before the triple quotes!
         st.markdown(r"""
         ### **Applying Nodal Loads**
         In standard truss analysis, external forces can only be applied directly to the joints (nodes), not to the middle of the members. 
@@ -152,6 +149,7 @@ with col1:
         * **Negative (`-`):** Force acts **Downward** $\downarrow$ (like gravity or dead load).
         * *Example:* For a $100 \text{ kN}$ downward weight, you must enter `-100000`.
         """)
+        
     st.subheader("Nodal Loads")
     load_df = st.data_editor(st.session_state['loads_data'], num_rows="dynamic", key="loads")
     
@@ -207,7 +205,7 @@ with col2:
     # Create two separate tabs for better pedagogical clarity
     tab1, tab2 = st.tabs(["🏗️ Undeformed Geometry", "📊 Structural Forces (Results)"])
 
-   # ---------------------------------------------------------
+    # ---------------------------------------------------------
     # TAB 1: BASE MODEL (Geometry, Node IDs, Member IDs, Loads & Supports)
     # ---------------------------------------------------------
     with tab1:
@@ -336,6 +334,7 @@ with col2:
             plot_bgcolor='white'
         )
         st.plotly_chart(fig_base, use_container_width=True)
+
     # ---------------------------------------------------------
     # TAB 2: RESULTS (Thick 3D-Style Lines, Vibrant Colors)
     # ---------------------------------------------------------
@@ -420,6 +419,7 @@ with col2:
             st.plotly_chart(fig_res, use_container_width=True)
         else:
             st.info("👈 Input loads and click 'Calculate Results' to view the force diagram.")
+
 # ---------------------------------------------------------
 # NEW SECTION: THE "GLASS BOX" PEDAGOGICAL EXPLORER
 # ---------------------------------------------------------
@@ -432,7 +432,7 @@ if 'solved_truss' in st.session_state:
     
     g_col1, g_col2 = st.columns(2)
     
-      with g_col1:
+    with g_col1:
         st.subheader("1. Element Stiffness Matrices ($k$)")
         
         # Display the theory
@@ -491,19 +491,3 @@ if 'solved_truss' in st.session_state:
             
             st.write("**Active Force Vector ($F_f$):**")
             st.write(ts.F_reduced)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
