@@ -98,9 +98,10 @@ with col1:
     node_df = st.data_editor(st.session_state['nodes_data'], num_rows="dynamic", key="nodes")
 
 
-    # --- Guide for Members ---
+   # --- Guide for Members ---
     with st.expander("📘 Guide: How to connect Members & set Properties"):
-        st.markdown("""
+        # Notice the 'r' right before the triple quotes!
+        st.markdown(r"""
         ### **Defining Truss Members**
         A truss is made of straight members connected at joints (nodes). Each member needs to know where it starts, where it ends, how thick it is, and what material it is made of.
         
@@ -127,7 +128,8 @@ with col1:
 
     # --- Guide for Loads ---
     with st.expander("📘 Guide: How to apply External Loads"):
-        st.markdown("""
+        # Notice the 'r' right before the triple quotes!
+        st.markdown(r"""
         ### **Applying Nodal Loads**
         In standard truss analysis, external forces can only be applied directly to the joints (nodes), not to the middle of the members. 
         
@@ -482,6 +484,7 @@ if 'solved_truss' in st.session_state:
             
             st.write("**Active Force Vector ($F_f$):**")
             st.write(ts.F_reduced)
+
 
 
 
