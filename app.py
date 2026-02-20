@@ -60,6 +60,40 @@ with col1:
         st.session_state['members_data'] = pd.DataFrame(columns=["Node_I", "Node_J", "Area(sq.m)", "E (N/sq.m)"])
         st.session_state['loads_data'] = pd.DataFrame(columns=["Node_ID", "Force_X (N)", "Force_Y (N)"])
 
+    with st.expander("📘 Guide: How to enter Support Conditions"):
+        st.markdown("""
+        ### **Understanding Support Conditions (Boundary Conditions)**
+        For a truss to be stable and not float away into space, it must be attached to the ground. In structural analysis, we call these **Boundary Conditions**. 
+        
+        In this software, you define supports using binary logic (0 or 1) for the X (horizontal) and Y (vertical) directions:
+        * **`0` = Free to move:** The joint can translate in this direction. No reaction force is generated.
+        * **`1` = Restrained (Locked):** The joint is locked and cannot move in this direction. A reaction force will develop here to keep it in place.
+
+        #### **How to fill the Input Table:**
+        
+        **1. Free Node (Standard Truss Joint)**
+        * **What it is:** A normal joint connecting members in the air.
+        * **Input:** `Restrain_X = 0`, `Restrain_Y = 0`
+        * **Result:** The node can move freely under load.
+
+        **2. Pin Support (Hinged Support)**
+        * **What it is:** Think of a bolted hinge. The node cannot move left, right, up, or down. It is completely locked in place.
+        * **Input:** `Restrain_X = 1`, `Restrain_Y = 1`
+        * **Result:** Generates both horizontal ($R_x$) and vertical ($R_y$) reaction forces.
+
+        **3. Roller Support (Horizontal Surface)**
+        * **What it is:** Think of a skateboard on a flat floor. It is free to roll left and right, but the floor stops it from moving up and down.
+        * **Input:** `Restrain_X = 0`, `Restrain_Y = 1`
+        * **Result:** Generates only a vertical reaction force ($R_y$).
+
+        **4. Roller Support (Vertical Surface)**
+        * **What it is:** A roller pushed against a wall. It can slide up and down the wall freely, but cannot move left or right through the wall.
+        * **Input:** `Restrain_X = 1`, `Restrain_Y = 0`
+        * **Result:** Generates only a horizontal reaction force ($R_x$).
+        
+        *Note: To ensure your truss is stable, you generally need at least three total restraints (for example, one Pin and one Roller) that are not all parallel.*
+        """)
+    
     st.subheader("Nodes")
     node_df = st.data_editor(st.session_state['nodes_data'], num_rows="dynamic", key="nodes")
     
@@ -398,6 +432,7 @@ if 'solved_truss' in st.session_state:
             
             st.write("**Active Force Vector ($F_f$):**")
             st.write(ts.F_reduced)
+
 
 
 
