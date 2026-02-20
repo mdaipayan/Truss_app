@@ -10,6 +10,27 @@ from visualizer import draw_undeformed_geometry, draw_results_fbd
 st.set_page_config(page_title="Professional Truss Suite", layout="wide")
 st.title("🏗️ Professional Truss Analysis Developed by D Mandal")
 
+# ---------------------------------------------------------
+# GLOBAL SETTINGS (SIDEBAR)
+# ---------------------------------------------------------
+st.sidebar.header("⚙️ Display Settings")
+st.sidebar.info("The solver engine always calculates using base SI units (Newtons, meters). Use this setting to scale the visual output on the diagrams.")
+
+force_display = st.sidebar.selectbox(
+    "Force Display Unit", 
+    options=["Newtons (N)", "Kilonewtons (kN)", "Meganewtons (MN)"], 
+    index=1 # Defaults to kN
+)
+
+# Map the dropdown choice to the math scale factor
+unit_map = {
+    "Newtons (N)": (1.0, "N"), 
+    "Kilonewtons (kN)": (1000.0, "kN"), 
+    "Meganewtons (MN)": (1000000.0, "MN")
+}
+current_scale, current_unit = unit_map[force_display]
+
+
 # Persistent figure initialization
 fig = go.Figure()
 col1, col2 = st.columns([1, 2])
@@ -209,8 +230,8 @@ with col2:
     # TAB 1: BASE MODEL
     # ---------------------------------------------------------
     with tab1:
-        # Call the external visualization function
-        fig_base, node_errors, member_errors, load_errors = draw_undeformed_geometry(node_df, member_df, load_df)
+        # Pass the scale and unit into the geometry drawing function
+        fig_base, node_errors, member_errors, load_errors = draw_undeformed_geometry(node_df, member_df, load_df, scale_factor=current_scale, unit_label=current_unit)
         
         # Display Pedagogical Warnings for any detected typing errors
         if node_errors:
@@ -226,12 +247,12 @@ with col2:
     # ---------------------------------------------------------
     # TAB 2: RESULTS (Free Body Diagram)
     # ---------------------------------------------------------
-    with tab2:
+   with tab2:
         if 'solved_truss' in st.session_state:
             ts = st.session_state['solved_truss']
             
-            # Call the external visualization function
-            fig_res = draw_results_fbd(ts)
+            # Pass the scale and unit into the FBD results function
+            fig_res = draw_results_fbd(ts, scale_factor=current_scale, unit_label=current_unit)
             
             # Save the beautiful chart for the word report and render it
             st.session_state['current_fig'] = fig_res 
@@ -310,6 +331,7 @@ if 'solved_truss' in st.session_state:
             
             st.write("**Active Force Vector ($F_f$):**")
             st.write(ts.F_reduced)
+
 
 
 
