@@ -15,17 +15,27 @@ class Node:
 
 class Member:
     def __init__(self, id, node_i, node_j, E, A):
+        if E <= 0:
+            raise ValueError(f"Member {id} has invalid Young's Modulus (E must be > 0).")
+        if A <= 0:
+            raise ValueError(f"Member {id} has invalid Area (A must be > 0).")
+            
         self.id = id
         self.node_i = node_i
         self.node_j = node_j
         self.E = E
         self.A = A
-        self.k_global_matrix = None # Stores local matrix for the Glass-Box UI
+        self.k_global_matrix = None 
+        
+        # Instantly check for zero-length members
+        if self.get_length() == 0:
+            raise ValueError(f"Member {id} has zero length. Nodes {node_i.id} and {node_j.id} share the same coordinates.")
 
     def get_length(self):
         dx = self.node_j.x - self.node_i.x
         dy = self.node_j.y - self.node_i.y
         return math.sqrt(dx**2 + dy**2)
+
 
     def get_k_global(self):
         L = self.get_length()
@@ -134,3 +144,4 @@ class TrussSystem:
             node.ry_val = Reactions[2*node.id-1]
         
         return "Solved"
+
