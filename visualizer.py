@@ -2,7 +2,7 @@ import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 
-def draw_undeformed_geometry(node_df, member_df, load_df):
+def draw_undeformed_geometry(node_df, member_df, load_df, scale_factor=1000.0, unit_label="kN"):
     """Generates the base geometry Plotly figure and returns any input errors."""
     fig_base = go.Figure()
     node_errors, member_errors, load_errors = [], [], []
@@ -69,10 +69,10 @@ def draw_undeformed_geometry(node_df, member_df, load_df):
                 
                 if abs(fy) > 0:
                     ay_val = -50 if fy > 0 else 50
-                    fig_base.add_annotation(x=nx, y=ny, ax=0, ay=ay_val, xref="x", yref="y", axref="pixel", ayref="pixel", text=f"<b>{abs(fy)/1000} kN</b>", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2.5, arrowcolor="darkorange", font=dict(color="darkorange", size=11), bgcolor="white")
+                    fig_base.add_annotation(x=nx, y=ny, ax=0, ay=ay_val, xref="x", yref="y", axref="pixel", ayref="pixel", text=f"<b>{round(abs(fy)/scale_factor, 2)} {unit_label}</b>", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2.5, arrowcolor="darkorange", font=dict(color="darkorange", size=11), bgcolor="white")
                 if abs(fx) > 0:
                     ax_val = -50 if fx > 0 else 50
-                    fig_base.add_annotation(x=nx, y=ny, ax=ax_val, ay=0, xref="x", yref="y", axref="pixel", ayref="pixel", text=f"<b>{abs(fx)/1000} kN</b>", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2.5, arrowcolor="darkorange", font=dict(color="darkorange", size=11), bgcolor="white")
+                    fig_base.add_annotation(x=nx, y=ny, ax=ax_val, ay=0, xref="x", yref="y", axref="pixel", ayref="pixel", text=f"<b>{round(abs(fx)/scale_factor, 2)} {unit_label}</b>", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2.5, arrowcolor="darkorange", font=dict(color="darkorange", size=11), bgcolor="white")
             except (ValueError, TypeError, IndexError):
                 load_errors.append(f"Row {i+1}")
 
