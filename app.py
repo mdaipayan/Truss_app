@@ -379,7 +379,7 @@ if 'solved_truss' in st.session_state:
         \begin{bmatrix} K_{ff} & K_{fs} \\ K_{sf} & K_{ss} \end{bmatrix} 
         \begin{bmatrix} U_f \\ U_s \end{bmatrix}
         """)
-        st.markdown("The $2n \times 2n$ global stiffness matrix is partitioned into free ($f$) and restrained ($s$) degrees of freedom[cite: 90].")
+        st.markdown(r"The $2n \times 2n$ global stiffness matrix is partitioned into free ($f$) and restrained ($s$) degrees of freedom.")
         
         # Display the numerical global matrix
         with st.expander("View Full Unpartitioned Global Matrix ($K_{global}$)"):
@@ -398,6 +398,7 @@ if 'solved_truss' in st.session_state:
             
             st.write("**Active Force Vector ($F_f$):**")
             st.write(ts.F_reduced)
+
 
 
 
