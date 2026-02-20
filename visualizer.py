@@ -89,12 +89,8 @@ def draw_results_fbd(ts, scale_factor=1000.0, unit_label="kN"):
         f = mbr.calculate_force()
         val_scaled = round(abs(f) / scale_factor, 2)
         
-       # ... (color logic remains the same, just change val_kn to val_scaled) ...
-        
-        if val_scaled >= 0.01: 
-            label_html = f"<b>{val_scaled} {unit_label}</b><br><i>{nature}</i>"
-        
-        if val_kn < 0.01:
+        # Determine Color and Nature
+        if val_scaled < 0.01:
             nature, color = "Zero-Force", "darkgray"
         else:
             nature = "Compressive" if f < 0 else "Tensile"
@@ -110,17 +106,18 @@ def draw_results_fbd(ts, scale_factor=1000.0, unit_label="kN"):
         
         fig_res.add_trace(go.Scatter(x=[x0, x1], y=[y0, y1], mode='lines', line=dict(color=color, width=8), showlegend=False))
         
-        if val_kn >= 0.01: 
-            label_html = f"<b>{val_kn} kN</b><br><i>{nature}</i>"
+        # Add labels based on scaled value
+        if val_scaled >= 0.01: 
+            label_html = f"<b>{val_scaled} {unit_label}</b><br><i>{nature}</i>"
             fig_res.add_annotation(x=mid_x, y=mid_y, text=label_html, showarrow=False, textangle=-angle_deg, yshift=25, font=dict(color=color, size=12), bgcolor="rgba(255,255,255,0.9)", bordercolor=color, borderwidth=2, borderpad=3)
         else:
-            fig_res.add_annotation(x=mid_x, y=mid_y, text="0.0 kN", showarrow=False, font=dict(color="gray", size=10), bgcolor="white")
+            fig_res.add_annotation(x=mid_x, y=mid_y, text=f"0.0 {unit_label}", showarrow=False, font=dict(color="gray", size=10), bgcolor="white")
 
     # Draw Nodes and Separated Support Reactions
     for node in ts.nodes:
         fig_res.add_trace(go.Scatter(x=[node.x], y=[node.y], mode='markers', marker=dict(color='black', size=12, line=dict(color='white', width=2)), showlegend=False))
         
-       if node.rx:
+        if node.rx:
             rx_scaled = round(node.rx_val / scale_factor, 2)
             ax_val = -50 if rx_scaled >= 0 else 50
             fig_res.add_annotation(x=node.x, y=node.y, text=f"<b>Rx: {abs(rx_scaled)} {unit_label}</b>", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=3, arrowcolor="darkgreen", ax=ax_val, ay=0, font=dict(color="white", size=11), bgcolor="darkgreen")
