@@ -432,7 +432,7 @@ if 'solved_truss' in st.session_state:
     
     g_col1, g_col2 = st.columns(2)
     
-    with g_col1:
+  with g_col1:
         st.subheader("1. Element Stiffness Matrices ($k$)")
         
         # Display the theory
@@ -445,15 +445,22 @@ if 'solved_truss' in st.session_state:
         -cs & -s^2 & cs & s^2 
         \end{bmatrix}
         """)
-        # Add the 'r' before the string so Python reads the LaTeX correctly
         st.markdown(r"Where $c = \cos(\theta) = \frac{\Delta x}{L}$ and $s = \sin(\theta) = \frac{\Delta y}{L}$.")
         
-        # Display the numerical output
-        mbr_opts = [f"Member {m.id}" for m in ts.members]
-        sel_mbr = st.selectbox("Select Member to view its calculated 4x4 matrix:", mbr_opts)
-        idx = int(sel_mbr.split(" ")[1]) - 1
-        df_k = pd.DataFrame(ts.members[idx].k_global_matrix)
-        st.dataframe(df_k.style.format("{:.2e}"))
+        # --- THE FIX: Safety check for empty member lists ---
+        if ts.members: 
+            mbr_opts = [f"Member {m.id}" for m in ts.members]
+            sel_mbr = st.selectbox("Select Member to view its calculated 4x4 matrix:", mbr_opts)
+            
+            if sel_mbr: # Only run this if a member is actually selected!
+                idx = int(sel_mbr.split(" ")[1]) - 1
+                if ts.members[idx].k_global_matrix is not None:
+                    df_k = pd.DataFrame(ts.members[idx].k_global_matrix)
+                    st.dataframe(df_k.style.format("{:.2e}"))
+                else:
+                    st.error("Matrix not found. Please check your member inputs.")
+        else:
+            st.warning("⚠️ No members found. Please define your members in the Input Table and click Calculate.")
         
     with g_col2:
         st.subheader("2. Global Assembly & Partitioning")
@@ -484,6 +491,7 @@ if 'solved_truss' in st.session_state:
             
             st.write("**Active Force Vector ($F_f$):**")
             st.write(ts.F_reduced)
+
 
 
 
