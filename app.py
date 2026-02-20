@@ -120,7 +120,7 @@ with col1:
         """)
     
     st.subheader("Nodes")
-    node_df = st.data_editor(st.session_state['nodes_data'], num_rows="dynamic", key="nodes")
+    node_df = st.data_editor(st.session_state['nodes_data'], num_rows="dynamic", key="nodes", on_change=clear_results)
 
     # --- Guide for Members ---
     with st.expander("📘 Guide: How to connect Members & set Properties"):
@@ -147,7 +147,7 @@ with col1:
         """)
     
     st.subheader("Members")
-    member_df = st.data_editor(st.session_state['members_data'], num_rows="dynamic", key="members")
+    member_df = st.data_editor(st.session_state['members_data'], num_rows="dynamic", key="members", on_change=clear_results )
 
     # --- Guide for Loads ---
     with st.expander("📘 Guide: How to apply External Loads"):
@@ -176,7 +176,7 @@ with col1:
         """)
         
     st.subheader("Nodal Loads")
-    load_df = st.data_editor(st.session_state['loads_data'], num_rows="dynamic", key="loads")
+    load_df = st.data_editor(st.session_state['loads_data'], num_rows="dynamic", key="loads", on_change=clear_results )
     
     if st.button("Calculate Results"):
         try:
@@ -341,6 +341,7 @@ if 'solved_truss' in st.session_state:
             
             st.write("**Active Force Vector ($F_f$):**")
             st.write(ts.F_reduced)
+
 
 
 
