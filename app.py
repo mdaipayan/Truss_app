@@ -432,7 +432,7 @@ if 'solved_truss' in st.session_state:
     
     g_col1, g_col2 = st.columns(2)
     
-  with g_col1:
+      with g_col1:
         st.subheader("1. Element Stiffness Matrices ($k$)")
         
         # Display the theory
@@ -491,6 +491,7 @@ if 'solved_truss' in st.session_state:
             
             st.write("**Active Force Vector ($F_f$):**")
             st.write(ts.F_reduced)
+
 
 
 
