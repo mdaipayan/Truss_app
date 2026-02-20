@@ -83,16 +83,27 @@ class TrussSystem:
         K_reduced = K_global[np.ix_(free_dofs, free_dofs)]
         F_reduced = F_global[free_dofs]
         
-        self.K_reduced = K_reduced # Store Reduced Matrix for Glass-Box
+       self.K_reduced = K_reduced # Store Reduced Matrix for Glass-Box
         self.F_reduced = F_reduced
         
-        # 4. Solve for Displacements
-        U_reduced = np.linalg.solve(K_reduced, F_reduced)
-        
-        for i, dof in enumerate(free_dofs):
-            node_idx = dof // 2
-            if dof % 2 == 0: self.nodes[node_idx].ux = U_reduced[i]
-            else: self.nodes[node_idx].uy = U_reduced[i]
+        # ---------------------------------------------------------
+        # FIX FOR CRITIQUE 3: Pre-Solve Stability Check
+        # ---------------------------------------------------------
+        if K_reduced.size == 0:
+            raise ValueError("No free degrees of freedom. The structure is completely locked.")
+            
+        # Check the condition number to detect rigid-body motion or unstable mechanisms
+        # A very high condition number means the matrix is singular or highly ill-conditioned
+        cond_num = np.linalg.cond(K_reduced)
+        if cond_num > 1e12: 
+            raise ValueError("Structural Instability Detected! The stiffness matrix is singular. Please check your boundary conditions and ensure the truss is fully restrained against moving or spinning.")
+            
+        try:
+            # 4. Solve for Displacements
+            U_reduced = np.linalg.solve(K_reduced, F_reduced)
+        except np.linalg.LinAlgError:
+            # Fallback catch just in case numpy fails before the condition check
+            raise ValueError("Structural Instability Detected! The stiffness matrix is singular. Please check your boundary conditions.")
         
         # 5. Calculate Reactions: R = K*U - F
         U_all = np.zeros(n_dof) 
@@ -107,4 +118,5 @@ class TrussSystem:
         
         return "Solved"
     
+
 
