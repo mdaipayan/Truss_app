@@ -80,14 +80,19 @@ def draw_undeformed_geometry(node_df, member_df, load_df, scale_factor=1000.0, u
     return fig_base, node_errors, member_errors, load_errors
 
 
-def draw_results_fbd(ts):
+def draw_results_fbd(ts, scale_factor=1000.0, unit_label="kN"):
     """Generates the solved free-body diagram figure with separated reactions."""
     fig_res = go.Figure()
     
     # Plot Members with Forces
     for mbr in ts.members:
         f = mbr.calculate_force()
-        val_kn = round(abs(f)/1000, 2)
+        val_scaled = round(abs(f) / scale_factor, 2)
+        
+       # ... (color logic remains the same, just change val_kn to val_scaled) ...
+        
+        if val_scaled >= 0.01: 
+            label_html = f"<b>{val_scaled} {unit_label}</b><br><i>{nature}</i>"
         
         if val_kn < 0.01:
             nature, color = "Zero-Force", "darkgray"
@@ -115,15 +120,15 @@ def draw_results_fbd(ts):
     for node in ts.nodes:
         fig_res.add_trace(go.Scatter(x=[node.x], y=[node.y], mode='markers', marker=dict(color='black', size=12, line=dict(color='white', width=2)), showlegend=False))
         
-        if node.rx:
-            rx_kn = round(node.rx_val / 1000, 2)
-            ax_val = -50 if rx_kn >= 0 else 50
-            fig_res.add_annotation(x=node.x, y=node.y, text=f"<b>Rx: {abs(rx_kn)} kN</b>", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=3, arrowcolor="darkgreen", ax=ax_val, ay=0, font=dict(color="white", size=11), bgcolor="darkgreen")
+       if node.rx:
+            rx_scaled = round(node.rx_val / scale_factor, 2)
+            ax_val = -50 if rx_scaled >= 0 else 50
+            fig_res.add_annotation(x=node.x, y=node.y, text=f"<b>Rx: {abs(rx_scaled)} {unit_label}</b>", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=3, arrowcolor="darkgreen", ax=ax_val, ay=0, font=dict(color="white", size=11), bgcolor="darkgreen")
             
         if node.ry:
-            ry_kn = round(node.ry_val / 1000, 2)
-            ay_val = 50 if ry_kn >= 0 else -50
-            fig_res.add_annotation(x=node.x, y=node.y, text=f"<b>Ry: {abs(ry_kn)} kN</b>", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=3, arrowcolor="darkgreen", ax=0, ay=ay_val, font=dict(color="white", size=11), bgcolor="darkgreen")
+            ry_scaled = round(node.ry_val / scale_factor, 2)
+            ay_val = 50 if ry_scaled >= 0 else -50
+            fig_res.add_annotation(x=node.x, y=node.y, text=f"<b>Ry: {abs(ry_scaled)} {unit_label}</b>", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=3, arrowcolor="darkgreen", ax=0, ay=ay_val, font=dict(color="white", size=11), bgcolor="darkgreen")
 
     fig_res.update_layout(yaxis=dict(scaleanchor="x", scaleratio=1), plot_bgcolor='rgb(240, 242, 246)', margin=dict(l=0, r=0, t=30, b=0))
     return fig_res
