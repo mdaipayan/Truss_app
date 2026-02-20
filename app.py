@@ -211,128 +211,105 @@ with col2:
     with tab1:
         fig_base = go.Figure()
         
-        # 1. Plot Supports dynamically (Drawn first so they sit under the nodes)
+        # Error tracking lists for pedagogical feedback
+        node_errors = []
+        member_errors = []
+        load_errors = []
+        
+        # 1. Plot Supports and Nodes dynamically
         if not node_df.empty:
             for i, row in node_df.iterrows():
                 try:
-                    rx = int(row.get('Restrain_X', 0))
-                    ry = int(row.get('Restrain_Y', 0))
+                    # Gracefully skip empty rows while user is typing
+                    if pd.isna(row.get('X')) or pd.isna(row.get('Y')): 
+                        continue
+                        
                     nx, ny = float(row['X']), float(row['Y'])
                     
+                    # --- Draw Support ---
+                    rx = int(row.get('Restrain_X', 0)) if not pd.isna(row.get('Restrain_X')) else 0
+                    ry = int(row.get('Restrain_Y', 0)) if not pd.isna(row.get('Restrain_Y')) else 0
+                    
                     if rx == 1 and ry == 1:
-                        # PIN SUPPORT (Both X and Y Restrained)
-                        fig_base.add_trace(go.Scatter(
-                            x=[nx], y=[ny], mode='markers',
-                            marker=dict(symbol='triangle-up', size=20, color='forestgreen'),
-                            showlegend=False, hoverinfo='skip'
-                        ))
-                        fig_base.add_annotation(
-                            x=nx, y=ny, text="<b>Pin</b>", showarrow=False, yshift=-25,
-                            font=dict(color="forestgreen", size=11)
-                        )
+                        fig_base.add_trace(go.Scatter(x=[nx], y=[ny], mode='markers', marker=dict(symbol='triangle-up', size=20, color='forestgreen'), showlegend=False, hoverinfo='skip'))
+                        fig_base.add_annotation(x=nx, y=ny, text="<b>Pin</b>", showarrow=False, yshift=-25, font=dict(color="forestgreen", size=11))
                     elif rx == 0 and ry == 1:
-                        # ROLLER SUPPORT (Y Restrained, X Free)
-                        fig_base.add_trace(go.Scatter(
-                            x=[nx], y=[ny], mode='markers',
-                            marker=dict(symbol='circle-open', size=18, color='forestgreen', line=dict(width=4)),
-                            showlegend=False, hoverinfo='skip'
-                        ))
-                        fig_base.add_annotation(
-                            x=nx, y=ny, text="<b>Roller</b>", showarrow=False, yshift=-25,
-                            font=dict(color="forestgreen", size=11)
-                        )
+                        fig_base.add_trace(go.Scatter(x=[nx], y=[ny], mode='markers', marker=dict(symbol='circle-open', size=18, color='forestgreen', line=dict(width=4)), showlegend=False, hoverinfo='skip'))
+                        fig_base.add_annotation(x=nx, y=ny, text="<b>Roller</b>", showarrow=False, yshift=-25, font=dict(color="forestgreen", size=11))
                     elif rx == 1 and ry == 0:
-                        # ROLLER SUPPORT Vertical (X Restrained, Y Free)
-                        fig_base.add_trace(go.Scatter(
-                            x=[nx], y=[ny], mode='markers',
-                            marker=dict(symbol='square-open', size=18, color='forestgreen', line=dict(width=4)),
-                            showlegend=False, hoverinfo='skip'
-                        ))
-                        fig_base.add_annotation(
-                            x=nx, y=ny, text="<b>Roller (X-fixed)</b>", showarrow=False, xshift=-35,
-                            font=dict(color="forestgreen", size=11)
-                        )
-                except: pass
+                        fig_base.add_trace(go.Scatter(x=[nx], y=[ny], mode='markers', marker=dict(symbol='square-open', size=18, color='forestgreen', line=dict(width=4)), showlegend=False, hoverinfo='skip'))
+                        fig_base.add_annotation(x=nx, y=ny, text="<b>Roller (X-fixed)</b>", showarrow=False, xshift=-35, font=dict(color="forestgreen", size=11))
+                    
+                    # --- Draw Node Point ---
+                    fig_base.add_trace(go.Scatter(x=[nx], y=[ny], mode='markers+text', text=[f"<b>Node {i+1}</b>"], textposition="top center", marker=dict(color='black', size=10), showlegend=False))
+                    
+                except (ValueError, TypeError):
+                    node_errors.append(str(i+1))
 
         # 2. Plot Members and Member IDs dynamically
         if not node_df.empty and not member_df.empty:
             for i, row in member_df.iterrows():
                 try:
+                    if pd.isna(row.get('Node_I')) or pd.isna(row.get('Node_J')): 
+                        continue
+                        
                     ni, nj = int(row['Node_I'])-1, int(row['Node_J'])-1
+                    
+                    # Verify the nodes actually exist before trying to draw lines
+                    if ni < 0 or nj < 0 or ni >= len(node_df) or nj >= len(node_df):
+                        member_errors.append(f"M{i+1} (Invalid Node ID)")
+                        continue
+                        
                     n1, n2 = node_df.iloc[ni], node_df.iloc[nj]
+                    if pd.isna(n1.get('X')) or pd.isna(n2.get('X')): 
+                        continue
+                        
                     x0, y0, x1, y1 = float(n1['X']), float(n1['Y']), float(n2['X']), float(n2['Y'])
                     
-                    # Draw dashed line for the member
-                    fig_base.add_trace(go.Scatter(
-                        x=[x0, x1], y=[y0, y1], 
-                        mode='lines', 
-                        line=dict(color='gray', width=2, dash='dash'), 
-                        showlegend=False
-                    ))
+                    fig_base.add_trace(go.Scatter(x=[x0, x1], y=[y0, y1], mode='lines', line=dict(color='gray', width=2, dash='dash'), showlegend=False))
+                    fig_base.add_annotation(x=(x0+x1)/2, y=(y0+y1)/2, text=f"<b>M{i+1}</b>", showarrow=False, font=dict(color="blue", size=11), bgcolor="rgba(255, 255, 255, 0.8)", bordercolor="blue", borderwidth=1)
                     
-                    # Add Member Label in the middle
-                    fig_base.add_annotation(
-                        x=(x0+x1)/2, y=(y0+y1)/2, 
-                        text=f"<b>M{i+1}</b>",
-                        showarrow=False,
-                        font=dict(color="blue", size=11),
-                        bgcolor="rgba(255, 255, 255, 0.8)", 
-                        bordercolor="blue", borderwidth=1
-                    )
-                except: pass
-                
-        # 3. Plot Nodes and Node Labels (Drawn on top of supports)
-        if not node_df.empty:
-            for i, row in node_df.iterrows():
-                try:
-                    nx, ny = float(row['X']), float(row['Y'])
-                    fig_base.add_trace(go.Scatter(
-                        x=[nx], y=[ny], 
-                        mode='markers+text',
-                        text=[f"<b>Node {i+1}</b>"], 
-                        textposition="top center",
-                        marker=dict(color='black', size=10), 
-                        showlegend=False
-                    ))
-                except: pass
-        
-        # 4. Plot Load Arrows dynamically
+                except (ValueError, TypeError, IndexError):
+                    member_errors.append(f"M{i+1}")
+
+        # 3. Plot Load Arrows dynamically
         if not node_df.empty and not load_df.empty:
             for i, row in load_df.iterrows():
                 try:
+                    if pd.isna(row.get('Node_ID')): 
+                        continue
+                        
                     node_idx = int(row['Node_ID']) - 1
-                    nx, ny = float(node_df.iloc[node_idx]['X']), float(node_df.iloc[node_idx]['Y'])
                     
-                    # Handle Y-Direction Forces (Vertical)
-                    fy = float(row.get('Force_Y (N)', 0))
+                    # Verify the node exists before applying load
+                    if node_idx < 0 or node_idx >= len(node_df):
+                        load_errors.append(f"Row {i+1} (Node not found)")
+                        continue
+                        
+                    nx, ny = float(node_df.iloc[node_idx]['X']), float(node_df.iloc[node_idx]['Y'])
+                    fy = float(row.get('Force_Y (N)', 0)) if not pd.isna(row.get('Force_Y (N)')) else 0.0
+                    fx = float(row.get('Force_X (N)', 0)) if not pd.isna(row.get('Force_X (N)')) else 0.0
+                    
                     if abs(fy) > 0:
                         ay_val = -50 if fy > 0 else 50
-                        fig_base.add_annotation(
-                            x=nx, y=ny,
-                            ax=0, ay=ay_val, xref="x", yref="y", axref="pixel", ayref="pixel",
-                            text=f"<b>{abs(fy)/1000} kN</b>",
-                            showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2.5, arrowcolor="darkorange",
-                            font=dict(color="darkorange", size=11), bgcolor="white"
-                        )
+                        fig_base.add_annotation(x=nx, y=ny, ax=0, ay=ay_val, xref="x", yref="y", axref="pixel", ayref="pixel", text=f"<b>{abs(fy)/1000} kN</b>", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2.5, arrowcolor="darkorange", font=dict(color="darkorange", size=11), bgcolor="white")
                         
-                    # Handle X-Direction Forces (Horizontal)
-                    fx = float(row.get('Force_X (N)', 0))
                     if abs(fx) > 0:
                         ax_val = -50 if fx > 0 else 50
-                        fig_base.add_annotation(
-                            x=nx, y=ny,
-                            ax=ax_val, ay=0, xref="x", yref="y", axref="pixel", ayref="pixel",
-                            text=f"<b>{abs(fx)/1000} kN</b>",
-                            showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2.5, arrowcolor="darkorange",
-                            font=dict(color="darkorange", size=11), bgcolor="white"
-                        )
-                except: pass
+                        fig_base.add_annotation(x=nx, y=ny, ax=ax_val, ay=0, xref="x", yref="y", axref="pixel", ayref="pixel", text=f"<b>{abs(fx)/1000} kN</b>", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2.5, arrowcolor="darkorange", font=dict(color="darkorange", size=11), bgcolor="white")
+                        
+                except (ValueError, TypeError, IndexError):
+                    load_errors.append(f"Row {i+1}")
 
-        fig_base.update_layout(
-            yaxis=dict(scaleanchor="x", scaleratio=1), 
-            margin=dict(l=0, r=0, t=30, b=0),
-            plot_bgcolor='white'
-        )
+        # 4. Display Pedagogical Warnings for any detected errors
+        if node_errors:
+            st.warning(f"⚠️ **Geometry Warning:** Invalid data at Node row(s): {', '.join(node_errors)}. Please ensure coordinates are numbers.")
+        if member_errors:
+            st.warning(f"⚠️ **Connectivity Warning:** Cannot draw {', '.join(member_errors)}. Ensure Node IDs exist and are numbers.")
+        if load_errors:
+            st.warning(f"⚠️ **Loads Warning:** Invalid data at Loads table row(s): {', '.join(load_errors)}.")
+
+        fig_base.update_layout(yaxis=dict(scaleanchor="x", scaleratio=1), margin=dict(l=0, r=0, t=30, b=0), plot_bgcolor='white')
         st.plotly_chart(fig_base, use_container_width=True)
 
     # ---------------------------------------------------------
@@ -507,4 +484,5 @@ if 'solved_truss' in st.session_state:
             
             st.write("**Active Force Vector ($F_f$):**")
             st.write(ts.F_reduced)
+
 
