@@ -96,10 +96,62 @@ with col1:
     
     st.subheader("Nodes")
     node_df = st.data_editor(st.session_state['nodes_data'], num_rows="dynamic", key="nodes")
+
+
+    # --- Guide for Members ---
+    with st.expander("📘 Guide: How to connect Members & set Properties"):
+        st.markdown("""
+        ### **Defining Truss Members**
+        A truss is made of straight members connected at joints (nodes). Each member needs to know where it starts, where it ends, how thick it is, and what material it is made of.
+        
+        #### **How to fill the Input Table:**
+        
+        **1. Connectivity (Node_I and Node_J)**
+        * **What it is:** The starting and ending nodes of the member.
+        * **Input:** Enter the integer ID of the nodes (e.g., `1` and `2`). 
+        * *Note:* For static truss analysis, the order does not matter (connecting Node 1 to 2 is the same as connecting Node 2 to 1).
+
+        **2. Cross-Sectional Area (Area sq.m)**
+        * **What it is:** The physical thickness of the member, represented by its cross-sectional area ($A$).
+        * **Input:** Enter the value strictly in **square meters ($m^2$)**. 
+        * *Example:* If your member area is $100 \text{ cm}^2$, you must enter `0.01`.
+
+        **3. Young's Modulus (E N/sq.m)**
+        * **What it is:** The stiffness of the material ($E$), which dictates how much it stretches under force.
+        * **Input:** Enter the value in **Pascals ($N/m^2$)**.
+        * *Pro-Tip (Scientific Notation):* Structural values are often huge. For standard steel ($200 \text{ GPa}$ or $200,000,000,000 \text{ Pa}$), you can simply type `2e11`. Python will understand this perfectly!
+        """)
     
     st.subheader("Members")
     member_df = st.data_editor(st.session_state['members_data'], num_rows="dynamic", key="members")
-    
+
+
+
+    # --- Guide for Loads ---
+    with st.expander("📘 Guide: How to apply External Loads"):
+        st.markdown("""
+        ### **Applying Nodal Loads**
+        In standard truss analysis, external forces can only be applied directly to the joints (nodes), not to the middle of the members. 
+        
+        This software uses the standard **Cartesian Sign Convention**.
+
+        #### **How to fill the Input Table:**
+        
+        **1. Target Node (Node_ID)**
+        * **Input:** Enter the integer ID of the node where the force is pushing or pulling.
+
+        **2. Horizontal Force (Force_X)**
+        * **Input:** Enter the force magnitude in **Newtons ($N$)**.
+        * **Positive (`+`):** Force acts to the **Right** $\rightarrow$
+        * **Negative (`-`):** Force acts to the **Left** $\leftarrow$
+        * *Example:* For a $10 \text{ kN}$ wind load blowing to the right, enter `10000`.
+
+        **3. Vertical Force (Force_Y)**
+        * **Input:** Enter the force magnitude in **Newtons ($N$)**.
+        * **Positive (`+`):** Force acts **Upward** $\uparrow$
+        * **Negative (`-`):** Force acts **Downward** $\downarrow$ (like gravity or dead load).
+        * *Example:* For a $100 \text{ kN}$ downward weight, you must enter `-100000`.
+        """)
     st.subheader("Nodal Loads")
     load_df = st.data_editor(st.session_state['loads_data'], num_rows="dynamic", key="loads")
     
@@ -432,6 +484,7 @@ if 'solved_truss' in st.session_state:
             
             st.write("**Active Force Vector ($F_f$):**")
             st.write(ts.F_reduced)
+
 
 
 
