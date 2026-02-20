@@ -30,7 +30,6 @@ unit_map = {
 }
 current_scale, current_unit = unit_map[force_display]
 
-
 # Persistent figure initialization
 fig = go.Figure()
 col1, col2 = st.columns([1, 2])
@@ -220,7 +219,7 @@ with col1:
                         )
                 else:
                     st.error("Report generation failed. Please check environment permissions.")
- 
+
 with col2:
     st.header("2. Model Visualization")
     
@@ -247,7 +246,7 @@ with col2:
     # ---------------------------------------------------------
     # TAB 2: RESULTS (Free Body Diagram)
     # ---------------------------------------------------------
-   with tab2:
+    with tab2:
         if 'solved_truss' in st.session_state:
             ts = st.session_state['solved_truss']
             
@@ -331,8 +330,3 @@ if 'solved_truss' in st.session_state:
             
             st.write("**Active Force Vector ($F_f$):**")
             st.write(ts.F_reduced)
-
-
-
-
-
