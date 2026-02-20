@@ -129,7 +129,7 @@ with col2:
 if 'solved_truss' in st.session_state:
     st.markdown("---")
     st.header("🎓 Educational Glass-Box: Intermediate Matrix Steps")
-    st.info("Explore the internal matrix formations of the Direct Stiffness Method as requested by reviewers.")
+    st.info("Explore the internal matrix formations of the Direct Stiffness Method. Compare the theoretical formulas with the numerical matrices generated for your specific truss.")
     
     ts = st.session_state['solved_truss']
     
@@ -137,26 +137,56 @@ if 'solved_truss' in st.session_state:
     
     with g_col1:
         st.subheader("1. Element Stiffness Matrices ($k$)")
+        
+        # Display the theory
+        st.markdown("**Theoretical Formulation:**")
+        st.latex(r"""
+        k = \frac{EA}{L} \begin{bmatrix} 
+        c^2 & cs & -c^2 & -cs \\ 
+        cs & s^2 & -cs & -s^2 \\ 
+        -c^2 & -cs & c^2 & cs \\ 
+        -cs & -s^2 & cs & s^2 
+        \end{bmatrix}
+        """)
+        st.markdown("Where $c = \cos(\theta) = \frac{\Delta x}{L}$ and $s = \sin(\theta) = \frac{\Delta y}{L}$[cite: 83].")
+        
+        # Display the numerical output
         mbr_opts = [f"Member {m.id}" for m in ts.members]
-        sel_mbr = st.selectbox("Select Member to view its 4x4 matrix:", mbr_opts)
+        sel_mbr = st.selectbox("Select Member to view its calculated 4x4 matrix:", mbr_opts)
         idx = int(sel_mbr.split(" ")[1]) - 1
-        # Format the matrix nicely using pandas
         df_k = pd.DataFrame(ts.members[idx].k_global_matrix)
         st.dataframe(df_k.style.format("{:.2e}"))
         
     with g_col2:
         st.subheader("2. Global Assembly & Partitioning")
+        
+        # Display the theory
+        st.markdown("**Matrix Partitioning:**")
+        st.latex(r"""
+        \begin{bmatrix} F_f \\ F_s \end{bmatrix} = 
+        \begin{bmatrix} K_{ff} & K_{fs} \\ K_{sf} & K_{ss} \end{bmatrix} 
+        \begin{bmatrix} U_f \\ U_s \end{bmatrix}
+        """)
+        st.markdown("The $2n \times 2n$ global stiffness matrix is partitioned into free ($f$) and restrained ($s$) degrees of freedom[cite: 90].")
+        
+        # Display the numerical global matrix
         with st.expander("View Full Unpartitioned Global Matrix ($K_{global}$)"):
             df_K = pd.DataFrame(ts.K_global)
             st.dataframe(df_K.style.format("{:.2e}"))
             
+        # Display the reduced system theory and numerical output
         with st.expander("View Reduced System ($K_{ff} \cdot U_f = F_f$)"):
-            st.write("Reduced Stiffness Matrix ($K_{ff}$):")
+            st.markdown("**Solving for Unknown Displacements:**")
+            st.markdown("Since displacements at rigid supports are zero ($U_s = 0$), the system reduces to:")
+            st.latex(r"F_f = K_{ff} U_f \implies U_f = K_{ff}^{-1} F_f")
+            
+            st.write("**Reduced Stiffness Matrix ($K_{ff}$):**")
             df_Kff = pd.DataFrame(ts.K_reduced)
             st.dataframe(df_Kff.style.format("{:.2e}"))
-            st.write("Active Force Vector ($F_f$):")
+            
+            st.write("**Active Force Vector ($F_f$):**")
             st.write(ts.F_reduced)
-        
+
 
 
 
