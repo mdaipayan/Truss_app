@@ -43,15 +43,15 @@ class Member:
         return math.sqrt(dx**2 + dy**2)
 
     def get_k_global(self) -> np.ndarray:
-        L = self.get_length()
-        c = (self.node_j.x - self.node_i.x) / L
-        s = (self.node_j.y - self.node_i.y) / L
+        self.L = self.get_length()
+        self.c = (self.node_j.x - self.node_i.x) / self.L
+        self.s = (self.node_j.y - self.node_i.y) / self.L
         
-        k = (self.E * self.A / L) * np.array([
-            [ c**2,   c*s,   -c**2,  -c*s],
-            [ c*s,    s**2,  -c*s,   -s**2],
-            [-c**2,  -c*s,    c**2,   c*s],
-            [-c*s,   -s**2,   c*s,    s**2]
+        k = (self.E * self.A / self.L) * np.array([
+            [ self.c**2,   self.c*self.s,   -self.c**2,  -self.c*self.s],
+            [ self.c*self.s,    self.s**2,  -self.c*self.s,   -self.s**2],
+            [-self.c**2,  -self.c*self.s,    self.c**2,   self.c*self.s],
+            [-self.c*self.s,   -self.s**2,   self.c*self.s,    self.s**2]
         ])
         self.k_global_matrix = k 
         return k
