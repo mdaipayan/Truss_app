@@ -2,6 +2,10 @@ import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 
+import plotly.graph_objects as go
+import pandas as pd
+import numpy as np
+
 def draw_undeformed_geometry(node_df, member_df, load_df, scale_factor=1000.0, unit_label="kN"):
     """Generates the base geometry Plotly figure and returns any input errors."""
     fig_base = go.Figure()
@@ -14,7 +18,6 @@ def draw_undeformed_geometry(node_df, member_df, load_df, scale_factor=1000.0, u
                 if pd.isna(row.get('X')) or pd.isna(row.get('Y')): continue
                 nx, ny = float(row['X']), float(row['Y'])
                 
-                # Draw Support
                 rx = int(row.get('Restrain_X', 0)) if not pd.isna(row.get('Restrain_X')) else 0
                 ry = int(row.get('Restrain_Y', 0)) if not pd.isna(row.get('Restrain_Y')) else 0
                 
@@ -28,7 +31,6 @@ def draw_undeformed_geometry(node_df, member_df, load_df, scale_factor=1000.0, u
                     fig_base.add_trace(go.Scatter(x=[nx], y=[ny], mode='markers', marker=dict(symbol='square-open', size=18, color='forestgreen', line=dict(width=4)), showlegend=False, hoverinfo='skip'))
                     fig_base.add_annotation(x=nx, y=ny, text="<b>Roller (X-fixed)</b>", showarrow=False, xshift=-35, font=dict(color="forestgreen", size=11))
                 
-                # Draw Node Point
                 fig_base.add_trace(go.Scatter(x=[nx], y=[ny], mode='markers+text', text=[f"<b>Node {i+1}</b>"], textposition="top center", marker=dict(color='black', size=10), showlegend=False))
             except (ValueError, TypeError):
                 node_errors.append(str(i+1))
@@ -40,11 +42,14 @@ def draw_undeformed_geometry(node_df, member_df, load_df, scale_factor=1000.0, u
                 if pd.isna(row.get('Node_I')) or pd.isna(row.get('Node_J')): continue
                 ni, nj = int(row['Node_I'])-1, int(row['Node_J'])-1
                 
-                if ni < 0 or nj < 0 or ni >= len(node_df) or nj >= len(node_df):
+                # FIX: Check against the actual index labels, not the length of the dataframe
+                if ni not in node_df.index or nj not in node_df.index:
                     member_errors.append(f"M{i+1} (Invalid Node ID)")
                     continue
                     
-                n1, n2 = node_df.iloc[ni], node_df.iloc[nj]
+                # FIX: Use .loc for label-based indexing to survive row deletions
+                n1, n2 = node_df.loc[ni], node_df.loc[nj]
+                
                 if pd.isna(n1.get('X')) or pd.isna(n2.get('X')): continue
                 x0, y0, x1, y1 = float(n1['X']), float(n1['Y']), float(n2['X']), float(n2['Y'])
                 
@@ -59,11 +64,15 @@ def draw_undeformed_geometry(node_df, member_df, load_df, scale_factor=1000.0, u
             try:
                 if pd.isna(row.get('Node_ID')): continue
                 node_idx = int(row['Node_ID']) - 1
-                if node_idx < 0 or node_idx >= len(node_df):
+                
+                # FIX: Check against the actual index labels
+                if node_idx not in node_df.index:
                     load_errors.append(f"Row {i+1} (Node not found)")
                     continue
                     
-                nx, ny = float(node_df.iloc[node_idx]['X']), float(node_df.iloc[node_idx]['Y'])
+                # FIX: Use .loc for label-based indexing
+                nx, ny = float(node_df.loc[node_idx]['X']), float(node_df.loc[node_idx]['Y'])
+                
                 fy = float(row.get('Force_Y (N)', 0)) if not pd.isna(row.get('Force_Y (N)')) else 0.0
                 fx = float(row.get('Force_X (N)', 0)) if not pd.isna(row.get('Force_X (N)')) else 0.0
                 
