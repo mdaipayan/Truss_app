@@ -223,14 +223,19 @@ if 'solved_truss' in st.session_state:
         st.subheader("1. Element Stiffness Matrices ($k$)")
         st.latex(r"k = \frac{EA}{L} \begin{bmatrix} c^2 & cs & -c^2 & -cs \\ cs & s^2 & -cs & -s^2 \\ -c^2 & -cs & c^2 & cs \\ -cs & -s^2 & cs & s^2 \end{bmatrix}")
         
+       # --- THE BULLETPROOF FIX: ID Searching instead of List Indexing ---
         if ts.members: 
             mbr_opts = [f"Member {m.id}" for m in ts.members]
             sel_mbr = st.selectbox("Select Member to view its calculated 4x4 matrix:", mbr_opts)
             
             if sel_mbr and isinstance(sel_mbr, str) and " " in sel_mbr:
-                idx = int(sel_mbr.split(" ")[1]) - 1
-                if ts.members[idx].k_global_matrix is not None:
-                    df_k = pd.DataFrame(ts.members[idx].k_global_matrix)
+                selected_id = int(sel_mbr.split(" ")[1])
+                
+                # Safely search for the member object that matches the visual ID
+                selected_member = next((m for m in ts.members if m.id == selected_id), None)
+                
+                if selected_member and selected_member.k_global_matrix is not None:
+                    df_k = pd.DataFrame(selected_member.k_global_matrix)
                     st.dataframe(df_k.style.format("{:.2e}"))
                 else:
                     st.error("Matrix not found.")
@@ -251,3 +256,4 @@ if 'solved_truss' in st.session_state:
             st.write("**Active Force Vector ($F_f$):**")
             st.write(ts.F_reduced)
                                                 
+
