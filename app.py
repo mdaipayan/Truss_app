@@ -8,7 +8,7 @@ import os
 from visualizer import draw_undeformed_geometry, draw_results_fbd
 
 st.set_page_config(page_title="Professional Truss Suite", layout="wide")
-st.title("🏗️ Professional Truss Analysis: A cloud-native structural analysis plat-
+st.title("🏗️ Professional Truss Analysis \: A cloud-native structural analysis plat-
 form using the Direct Stiffness Method")
 
 st.sidebar.header("⚙️ Display Settings")
@@ -306,4 +306,5 @@ if 'solved_truss' in st.session_state:
                         st.success(f"**Calculated Axial Force:** {m.internal_force:.2f} N")
                     else:
                         st.info("Calculate results first to view kinematics.")
+
 
