@@ -94,6 +94,28 @@ def generate_report(truss_system, fig_base=None, fig_res=None, scale_factor=1000
         row[1].text = f"{n.ux:.6e}"
         row[2].text = f"{n.uy:.6e}"
 
+    # 5.5 Support Reactions Table (NEW ADDITION)
+    doc.add_heading('Support Reactions', level=1)
+    rxn_table = doc.add_table(rows=1, cols=3)
+    rxn_table.style = 'Table Grid'
+    rxn_table.rows[0].cells[0].text = 'Node ID'
+    rxn_table.rows[0].cells[1].text = f'Rx ({unit_label})'
+    rxn_table.rows[0].cells[2].text = f'Ry ({unit_label})'
+    
+    has_reactions = False
+    for n in truss_system.nodes:
+        if n.rx == 1 or n.ry == 1:
+            has_reactions = True
+            row = rxn_table.add_row().cells
+            row[0].text = str(n.id)
+            row[1].text = str(round(n.rx_val / scale_factor, 2)) if n.rx == 1 else "0.0"
+            row[2].text = str(round(n.ry_val / scale_factor, 2)) if n.ry == 1 else "0.0"
+            
+    if not has_reactions:
+        doc.add_paragraph("No rigid support reactions calculated.")
+        
+    
+
     # 6. Results Table (Dynamic Units)
     doc.add_heading('Detailed Analysis Results', level=1)
     res_table = doc.add_table(rows=1, cols=3)
@@ -114,3 +136,4 @@ def generate_report(truss_system, fig_base=None, fig_res=None, scale_factor=1000
             row[2].text = "Compressive" if f < 0 else "Tensile"
 
     doc.save("Analysis_Report.docx")
+
