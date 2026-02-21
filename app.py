@@ -100,18 +100,17 @@ with col1:
             node_map = {}
             valid_node_count = 0
             
-            # 1. Parse Nodes with Mapping (Fix for Critique 9)
+            # 1. Parse Nodes with Mapping
             for i, row in node_df.iterrows():
                 if pd.isna(row.get('X')) or pd.isna(row.get('Y')): continue
                 valid_node_count += 1
                 rx = int(row.get('Restrain_X', 0)) if not pd.isna(row.get('Restrain_X')) else 0
                 ry = int(row.get('Restrain_Y', 0)) if not pd.isna(row.get('Restrain_Y')) else 0
                 
-                # Internal ID is strictly sequential to prevent Array crashes
                 n = Node(valid_node_count, float(row['X']), float(row['Y']), rx, ry)
-                n.user_id = i + 1 # Dynamic variable keeps track of the visual row number
+                n.user_id = i + 1 
                 ts.nodes.append(n)
-                node_map[i + 1] = n # Map user row -> actual Node object
+                node_map[i + 1] = n 
                 
             # 2. Parse Members via Mapping
             for i, row in member_df.iterrows():
@@ -126,7 +125,7 @@ with col1:
                 A = float(row.get('Area(sq.m)', 0.01)) if not pd.isna(row.get('Area(sq.m)')) else 0.01
                 ts.members.append(Member(i+1, node_map[ni_val], node_map[nj_val], E, A))
                 
-            # 3. Parse Loads via Mapping (Fix for Critique 10)
+            # 3. Parse Loads via Mapping
             for i, row in load_df.iterrows():
                 if pd.isna(row.get('Node_ID')): continue
                 node_id_val = int(row['Node_ID'])
@@ -140,7 +139,6 @@ with col1:
                 
                 dof_x, dof_y = 2 * target_node.id - 2, 2 * target_node.id - 1
                 
-                # Accumulate forces in case user applies multiple loads to one node
                 ts.loads[dof_x] = ts.loads.get(dof_x, 0.0) + fx
                 ts.loads[dof_y] = ts.loads.get(dof_y, 0.0) + fy
             
@@ -153,13 +151,12 @@ with col1:
         except Exception as e:
             st.error(f"Error: {e}")
 
-    # Export Results Section (Fix for Critique 11)
+    # Export Results Section
     if 'solved_truss' in st.session_state:
         st.header("3. Export Results")
         from report_gen import generate_report
         ts_solved = st.session_state['solved_truss']
         
-        # We process the report into memory to bypass the nested button glitch
         if st.button("🚀 Prepare Professional Report"):
             with st.spinner("Generating Professional Report..."):
                 current_res_fig = st.session_state.get('current_fig', fig)
@@ -169,13 +166,11 @@ with col1:
                 
                 if os.path.exists(report_file):
                     with open(report_file, "rb") as f:
-                        # Save the document bytes directly into session state
                         st.session_state['report_data'] = f.read() 
-                    os.remove(report_file) # Immediately delete the temp docx from the server
+                    os.remove(report_file) 
                 else:
                     st.error("Report generation failed.")
                     
-        # This button is rendered OUTSIDE the first button, solving the Streamlit vanishing bug
         if 'report_data' in st.session_state:
             st.download_button(
                 label="📥 Download Word Report",
@@ -213,47 +208,100 @@ with col2:
         else:
             st.info("👈 Input loads and click 'Calculate Results' to view the force diagram.")
 
+# ---------------------------------------------------------
+# NEW SECTION: THE "GLASS BOX" PEDAGOGICAL EXPLORER
+# ---------------------------------------------------------
 if 'solved_truss' in st.session_state:
     st.markdown("---")
-    st.header("🎓 Educational Glass-Box: Intermediate Matrix Steps")
-    ts = st.session_state['solved_truss']
-    g_col1, g_col2 = st.columns(2)
+    st.header("🎓 Educational Glass-Box: Complete DSM Intermediate Steps")
+    st.info("Explore the internal mathematics of the Direct Stiffness Method. This section exposes every variable, matrix, and vector calculated by the backend solver.")
     
-    with g_col1:
-        st.subheader("1. Element Stiffness Matrices ($k$)")
-        st.latex(r"k = \frac{EA}{L} \begin{bmatrix} c^2 & cs & -c^2 & -cs \\ cs & s^2 & -cs & -s^2 \\ -c^2 & -cs & c^2 & cs \\ -cs & -s^2 & cs & s^2 \end{bmatrix}")
-        
-       # --- THE BULLETPROOF FIX: ID Searching instead of List Indexing ---
+    ts = st.session_state['solved_truss']
+    
+    gb_tab1, gb_tab2, gb_tab3 = st.tabs(["📐 1. Kinematics & Stiffness", "🧩 2. Global Assembly", "🚀 3. Displacements & Internal Forces"])
+    
+    # ------------------ TAB 1 ------------------
+    with gb_tab1:
+        st.subheader("Local Element Formulation")
         if ts.members: 
             mbr_opts = [f"Member {m.id}" for m in ts.members]
-            sel_mbr = st.selectbox("Select Member to view its calculated 4x4 matrix:", mbr_opts)
+            sel_mbr = st.selectbox("Select Member to inspect kinematics and stiffness:", mbr_opts, key="gb_tab1")
             
             if sel_mbr and isinstance(sel_mbr, str) and " " in sel_mbr:
                 selected_id = int(sel_mbr.split(" ")[1])
+                m = next((m for m in ts.members if m.id == selected_id), None)
                 
-                # Safely search for the member object that matches the visual ID
-                selected_member = next((m for m in ts.members if m.id == selected_id), None)
-                
-                if selected_member and selected_member.k_global_matrix is not None:
-                    df_k = pd.DataFrame(selected_member.k_global_matrix)
-                    st.dataframe(df_k.style.format("{:.2e}"))
+                if m and m.k_global_matrix is not None:
+                    colA, colB = st.columns(2)
+                    with colA:
+                        st.markdown("**Member Kinematics (Trigonometry)**")
+                        st.write(f"- **Length ($L$):** `{m.L:.4f} m`")
+                        st.write(f"- **Dir. Cosine ($c = \\cos\\theta$):** `{m.c:.4f}`")
+                        st.write(f"- **Dir. Sine ($s = \\sin\\theta$):** `{m.s:.4f}`")
+                        
+                        st.markdown("**Transformation Vector ($T$):**")
+                        st.latex(r"T = \begin{bmatrix} -c & -s & c & s \end{bmatrix}")
+                        st.dataframe(pd.DataFrame([m.T_vector], columns=["-c", "-s", "c", "s"]).style.format("{:.4f}"))
+                    
+                    with colB:
+                        st.markdown("**Local Stiffness Matrix ($k_{global}$)**")
+                        st.latex(r"k = \frac{EA}{L} \begin{bmatrix} c^2 & cs & -c^2 & -cs \\ cs & s^2 & -cs & -s^2 \\ -c^2 & -cs & c^2 & cs \\ -cs & -s^2 & cs & s^2 \end{bmatrix}")
+                        df_k = pd.DataFrame(m.k_global_matrix)
+                        st.dataframe(df_k.style.format("{:.2e}"))
                 else:
                     st.error("Matrix not found.")
         else:
             st.warning("⚠️ No members found.")
-        
-    with g_col2:
-        st.subheader("2. Global Assembly & Partitioning")
-        st.latex(r"\begin{bmatrix} F_f \\ F_s \end{bmatrix} = \begin{bmatrix} K_{ff} & K_{fs} \\ K_{sf} & K_{ss} \end{bmatrix} \begin{bmatrix} U_f \\ U_s \end{bmatrix}")
-        
-        with st.expander("View Full Unpartitioned Global Matrix ($K_{global}$)"):
-            st.dataframe(pd.DataFrame(ts.K_global).style.format("{:.2e}"))
             
-        with st.expander("View Reduced System ($K_{ff} \cdot U_f = F_f$)"):
-            st.latex(r"F_f = K_{ff} U_f \implies U_f = K_{ff}^{-1} F_f")
-            st.write("**Reduced Stiffness Matrix ($K_{ff}$):**")
-            st.dataframe(pd.DataFrame(ts.K_reduced).style.format("{:.2e}"))
-            st.write("**Active Force Vector ($F_f$):**")
-            st.write(ts.F_reduced)
-                                                
+    # ------------------ TAB 2 ------------------
+    with gb_tab2:
+        st.subheader("System Partitioning & Assembly")
+        colC, colD = st.columns(2)
+        
+        with colC:
+            st.markdown("**Degree of Freedom (DOF) Mapping**")
+            st.write(f"- **Free DOFs ($f$):** `{ts.free_dofs}`")
+            st.write(f"- **Restrained DOFs ($s$):** `{[i for i in range(2*len(ts.nodes)) if i not in ts.free_dofs]}`")
+            
+            st.markdown("**Active Load Vector ($F_f$)**")
+            st.dataframe(pd.DataFrame(ts.F_reduced, columns=["Force"]).style.format("{:.2e}"))
 
+        with colD:
+            st.markdown("**Matrix Partitioning Theory:**")
+            st.latex(r"\begin{bmatrix} F_f \\ F_s \end{bmatrix} = \begin{bmatrix} K_{ff} & K_{fs} \\ K_{sf} & K_{ss} \end{bmatrix} \begin{bmatrix} U_f \\ U_s \end{bmatrix}")
+            
+            with st.expander("View Full Unpartitioned Global Matrix ($K_{global}$)", expanded=True):
+                st.dataframe(pd.DataFrame(ts.K_global).style.format("{:.2e}"))
+                
+            with st.expander("View Reduced Stiffness Matrix ($K_{ff}$)", expanded=False):
+                st.dataframe(pd.DataFrame(ts.K_reduced).style.format("{:.2e}"))
+                
+    # ------------------ TAB 3 ------------------
+    with gb_tab3:
+        st.subheader("Solving the System & Extracting Forces")
+        colE, colF = st.columns(2)
+        
+        with colE:
+            st.markdown("**1. Global Displacement Vector ($U_{global}$)**")
+            st.latex(r"U_f = K_{ff}^{-1} F_f \implies \text{Stitch with } U_s = 0")
+            if hasattr(ts, 'U_global') and ts.U_global is not None:
+                st.dataframe(pd.DataFrame(ts.U_global, columns=["Displacement (m)"]).style.format("{:.6e}"))
+            else:
+                st.info("Update core_solver.py to calculate U_global.")
+                
+        with colF:
+            st.markdown("**2. Internal Force Extraction**")
+            if ts.members:
+                sel_mbr_force = st.selectbox("Select Member to view Force Extraction:", mbr_opts, key="gb_tab3")
+                if sel_mbr_force and isinstance(sel_mbr_force, str) and " " in sel_mbr_force:
+                    selected_id = int(sel_mbr_force.split(" ")[1])
+                    m = next((m for m in ts.members if m.id == selected_id), None)
+                    if m and hasattr(m, 'u_local') and m.u_local is not None:
+                        st.latex(r"F_{axial} = \frac{EA}{L} \cdot (T \cdot u_{local})")
+                        
+                        st.markdown("**Local Displacements ($u_{local}$):**")
+                        st.dataframe(pd.DataFrame([m.u_local], columns=["uix", "uiy", "ujx", "ujy"]).style.format("{:.6e}"))
+                        
+                        st.success(f"**Calculated Axial Force:** {m.internal_force:.2f} N")
+                    else:
+                        st.info("Calculate results first to view kinematics.")
