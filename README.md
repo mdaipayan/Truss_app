@@ -1,39 +1,40 @@
-# Professional Truss Suite (2D)
-**A Commercial-Grade Structural Analysis Tool**
+# 🏗️ Professional Truss Suite (2D)
+**A Pedagogical & Commercial-Grade Structural Analysis Tool**
 
 Developed by **Mr. D Mandal**, Assistant Professor, Department of Civil Engineering, KITS Ramtek.
 
+![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)
+![Streamlit](https://img.shields.io/badge/Streamlit-1.35+-red.svg)
+![License](https://img.shields.io/badge/License-GPLv3-green.svg)
+
 ---
 
-## 🛠️ Software Overview
-This application provides a comprehensive environment for the linear static analysis of 2D trusses using the **Direct Stiffness Method (DSM)**. It is designed for both academic purposes and professional engineering documentation.
+## 📖 Software Overview
+The **Professional Truss Suite** is an interactive, web-based environment for the linear static analysis of 2D trusses using the **Direct Stiffness Method (DSM)**. 
 
-## 📐 Engineering Methodology
-The core engine utilizes the Direct Stiffness Method to solve for nodal displacements and internal member forces.
-
-1. **Element Stiffness Matrix**: For each member, a local stiffness matrix is generated and transformed into global coordinates using the transformation matrix:
-   $$k_{global} = \frac{EA}{L} \begin{bmatrix} c^2 & cs & -c^2 & -cs \\ cs & s^2 & -cs & -s^2 \\ -c^2 & -cs & c^2 & cs \\ -cs & -s^2 & cs & s^2 \end{bmatrix}$$
-   *(where $c = \cos(\theta)$ and $s = \sin(\theta)$)*
-
-2. **Global Assembly**: Individual member matrices are assembled into a global stiffness matrix ($K_{global}$).
-
-3. **Boundary Conditions**: Supports are handled by partitioning the matrix and solving for free Degrees of Freedom (DOF).
-
-4. **Internal Forces**: Axial forces are calculated from the derived displacements, with positive values indicating **Compression** and negative values indicating **Tension**.
+Unlike commercial "black-box" software (like SAP2000 or STAAD.Pro) that hides the underlying mathematics, this application is designed as a **"Glass-Box" educational tool**. It explicitly bridges the gap between finite element theory and computational execution, allowing students to observe the formulation of local and global stiffness matrices in real-time.
 
 ## ✨ Key Features
-* **Automated Force Nature Detection**: Clearly distinguishes between Tensile and Compressive members.
-* **Parallel Visualization**: Force labels are automatically aligned parallel to members for professional clarity.
-* **Professional Reporting**: Generates a complete `.docx` report including:
-    * Software & Developer Metadata
-    * Truss Model Visualization Image
-    * Nodal Displacement & Support Reaction Tables
-    * Member Force & Material Property Tables
+* 🎓 **Educational "Glass-Box" Engine:** View step-by-step mathematical formulations including the $4 \times 4$ element stiffness matrices ($k$), the fully assembled unpartitioned global matrix ($K_{global}$), and the reduced partitioned system ($K_{ff} \cdot U_f = F_f$).
+* 📊 **Dynamic Free-Body Diagrams (FBD):** Renders high-fidelity, interactive Plotly graphics displaying undeformed geometry, dynamically scaled load arrows, and separated horizontal/vertical support reaction vectors ($R_x$, $R_y$).
+* 🔄 **Real-Time Unit Scaling:** Seamlessly toggle the visual output between Newtons (N), Kilonewtons (kN), and Meganewtons (MN) without altering the base SI solver engine.
+* 📝 **1-Click Professional Reporting:** Automatically generates a comprehensive `.docx` calculation report containing software metadata, embedded high-resolution graphics, nodal displacements, and categorized member forces.
+* 🛡️ **Mathematical Bulletproofing:** Includes strict physics validation (intercepts zero-length members, negative materials) and pre-solve condition number checks to identify structurally unstable mechanisms.
 
-## 🚀 How to Run
-1. Clone the repository.
-2. Install dependencies: `pip install -r requirements.txt`
-3. Run the app: `streamlit run app.py`
+## 📐 Engineering Methodology
+The core solver relies on standard matrix structural analysis:
+1. **Local Stiffness Formulation**: Calculates $k_{local}$ using standard trigonometric transformations ($c = \cos\theta, s = \sin\theta$).
+2. **Global Assembly**: Vectorized mapping of local DOFs to assemble the $2n \times 2n$ Global Stiffness Matrix.
+3. **Boundary Conditions**: Partitions the matrix into free and restrained DOFs to solve for unknown displacements.
+4. **Internal Forces**: Extracts member axial forces, automatically tagging them as **Tension** (Positive/Blue) or **Compression** (Negative/Red).
 
----
-*Disclaimer: This software is intended for educational and preliminary design verification. Always verify results with manual calculations for critical structural designs.*
+## 🚀 Installation & Local Setup
+
+### Prerequisites
+* Python 3.9 or newer.
+
+### Instructions
+1. **Clone the repository:**
+   ```bash
+   git clone [https://github.com/mdaipayan/Truss_app.git](https://github.com/mdaipayan/Truss_app.git)
+   cd Truss_app
