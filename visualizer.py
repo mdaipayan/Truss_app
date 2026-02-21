@@ -54,32 +54,45 @@ def draw_undeformed_geometry(node_df, member_df, load_df, scale_factor=1000.0, u
             except (ValueError, TypeError, IndexError):
                 member_errors.append(f"M{i+1}")
 
-    # 3. Plot Load Arrows
+    # 3. Plot Load Arrows (UPGRADED to Accumulate Loads)
     if not node_df.empty and not load_df.empty:
+        aggregated_loads = {}
+        
+        # Step 3A: Accumulate the forces per node
         for i, row in load_df.iterrows():
             try:
                 if pd.isna(row.get('Node_ID')): continue
                 node_idx = int(row['Node_ID']) - 1
                 
-                # FIX: Check against the actual index labels
+                # Check against the actual index labels
                 if node_idx not in node_df.index:
                     load_errors.append(f"Row {i+1} (Node not found)")
                     continue
                     
-                # FIX: Use .loc for label-based indexing
-                nx, ny = float(node_df.loc[node_idx]['X']), float(node_df.loc[node_idx]['Y'])
-                
                 fy = float(row.get('Force_Y (N)', 0)) if not pd.isna(row.get('Force_Y (N)')) else 0.0
                 fx = float(row.get('Force_X (N)', 0)) if not pd.isna(row.get('Force_X (N)')) else 0.0
                 
-                if abs(fy) > 0:
-                    ay_val = -50 if fy > 0 else 50
-                    fig_base.add_annotation(x=nx, y=ny, ax=0, ay=ay_val, xref="x", yref="y", axref="pixel", ayref="pixel", text=f"<b>{round(abs(fy)/scale_factor, 2)} {unit_label}</b>", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2.5, arrowcolor="darkorange", font=dict(color="darkorange", size=11), bgcolor="white")
-                if abs(fx) > 0:
-                    ax_val = -50 if fx > 0 else 50
-                    fig_base.add_annotation(x=nx, y=ny, ax=ax_val, ay=0, xref="x", yref="y", axref="pixel", ayref="pixel", text=f"<b>{round(abs(fx)/scale_factor, 2)} {unit_label}</b>", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2.5, arrowcolor="darkorange", font=dict(color="darkorange", size=11), bgcolor="white")
+                if node_idx not in aggregated_loads:
+                    aggregated_loads[node_idx] = {'fx': 0.0, 'fy': 0.0}
+                    
+                aggregated_loads[node_idx]['fx'] += fx
+                aggregated_loads[node_idx]['fy'] += fy
+                
             except (ValueError, TypeError, IndexError):
                 load_errors.append(f"Row {i+1}")
+
+        # Step 3B: Draw the aggregated load arrows
+        for node_idx, forces in aggregated_loads.items():
+            nx, ny = float(node_df.loc[node_idx]['X']), float(node_df.loc[node_idx]['Y'])
+            total_fx = forces['fx']
+            total_fy = forces['fy']
+            
+            if abs(total_fy) > 0:
+                ay_val = -50 if total_fy > 0 else 50
+                fig_base.add_annotation(x=nx, y=ny, ax=0, ay=ay_val, xref="x", yref="y", axref="pixel", ayref="pixel", text=f"<b>{round(abs(total_fy)/scale_factor, 2)} {unit_label}</b>", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2.5, arrowcolor="darkorange", font=dict(color="darkorange", size=11), bgcolor="white")
+            if abs(total_fx) > 0:
+                ax_val = -50 if total_fx > 0 else 50
+                fig_base.add_annotation(x=nx, y=ny, ax=ax_val, ay=0, xref="x", yref="y", axref="pixel", ayref="pixel", text=f"<b>{round(abs(total_fx)/scale_factor, 2)} {unit_label}</b>", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2.5, arrowcolor="darkorange", font=dict(color="darkorange", size=11), bgcolor="white")
 
     fig_base.update_layout(yaxis=dict(scaleanchor="x", scaleratio=1), margin=dict(l=0, r=0, t=30, b=0), plot_bgcolor='white')
     return fig_base, node_errors, member_errors, load_errors
