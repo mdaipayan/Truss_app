@@ -2,10 +2,6 @@ import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 
-import plotly.graph_objects as go
-import pandas as pd
-import numpy as np
-
 def draw_undeformed_geometry(node_df, member_df, load_df, scale_factor=1000.0, unit_label="kN"):
     """Generates the base geometry Plotly figure and returns any input errors."""
     fig_base = go.Figure()
