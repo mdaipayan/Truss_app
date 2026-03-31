@@ -38,3 +38,23 @@ The core solver relies on standard matrix structural analysis:
    ```bash
    git clone [https://github.com/mdaipayan/Truss_app.git](https://github.com/mdaipayan/Truss_app.git)
    cd Truss_app
+## 📚 How to Cite
+
+If you use the Professional Truss Suite in your teaching, research, or structural analysis projects, please cite the official publication in **Computer Applications in Engineering Education**:
+
+**Mandal, D. (2026). Development of an interactive web-based tool for 2D truss analysis using the direct stiffness method. *Computer Applications in Engineering Education*, 34(3), e70183. https://doi.org/10.1002/cae.70183**
+
+### BibTeX
+```bibtex
+@article{mandal2026truss,
+  title={Development of an interactive web-based tool for 2D truss analysis using the direct stiffness method},
+  author={Mandal, Daipayan},
+  journal={Computer Applications in Engineering Education},
+  volume={34},
+  number={3},
+  pages={e70183},
+  year={2026},
+  publisher={Wiley},
+  doi={10.1002/cae.70183},
+  url={[https://doi.org/10.1002/cae.70183](https://doi.org/10.1002/cae.70183)}
+}
