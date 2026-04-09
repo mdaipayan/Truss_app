@@ -88,7 +88,7 @@ def draw_undeformed_geometry(node_df, member_df, load_df, scale_factor=1000.0, u
             total_fy = forces['fy']
             
             if abs(total_fy) > 0:
-                ay_val = -50 if total_fy > 0 else 50
+                ay_val = 50 if total_fy > 0 else -50
                 fig_base.add_annotation(x=nx, y=ny, ax=0, ay=ay_val, xref="x", yref="y", axref="pixel", ayref="pixel", text=f"<b>{round(abs(total_fy)/scale_factor, 2)} {unit_label}</b>", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2.5, arrowcolor="darkorange", font=dict(color="darkorange", size=11), bgcolor="white")
             if abs(total_fx) > 0:
                 ax_val = -50 if total_fx > 0 else 50
