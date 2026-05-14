@@ -4,6 +4,7 @@ import numpy as np
 import plotly.graph_objects as go
 from core_solver import TrussSystem, Node, Member
 import datetime
+import csv
 import os
 from visualizer import draw_undeformed_geometry, draw_results_fbd
 
@@ -27,6 +28,23 @@ unit_map = {
 current_scale, current_unit = unit_map[force_display]
 
 fig = go.Figure()
+
+FEEDBACK_FILE = "feedback.csv"
+FEEDBACK_COLUMNS = ["timestamp", "rating", "category", "comments"]
+
+
+def save_feedback(rating, category, comments):
+    file_exists = os.path.exists(FEEDBACK_FILE)
+    with open(FEEDBACK_FILE, "a", newline="", encoding="utf-8") as feedback_file:
+        writer = csv.DictWriter(feedback_file, fieldnames=FEEDBACK_COLUMNS)
+        if not file_exists or os.path.getsize(FEEDBACK_FILE) == 0:
+            writer.writeheader()
+        writer.writerow({
+            "timestamp": datetime.datetime.now().isoformat(timespec="seconds"),
+            "rating": rating,
+            "category": category,
+            "comments": comments.strip(),
+        })
 
 def clear_results():
     if 'solved_truss' in st.session_state:
@@ -156,13 +174,25 @@ with col1:
         st.header("3. Export Results")
         from report_gen import generate_report
         ts_solved = st.session_state['solved_truss']
+        include_report_calculations = st.checkbox(
+            "Include full DSM formulas and matrix calculations",
+            value=False,
+            help="Adds local stiffness matrices, transformation transpose matrices, global stiffness matrices, and displacement calculations to the PDF report.",
+        )
         
         if st.button("🚀 Prepare Professional Report"):
             with st.spinner("Generating Professional Report..."):
                 current_res_fig = st.session_state.get('current_fig', fig)
                 current_base_fig = st.session_state.get('base_fig', None)
                 
-                report_file = generate_report(ts_solved, fig_base=current_base_fig, fig_res=current_res_fig, scale_factor=current_scale, unit_label=current_unit)
+                report_file = generate_report(
+                    ts_solved,
+                    fig_base=current_base_fig,
+                    fig_res=current_res_fig,
+                    scale_factor=current_scale,
+                    unit_label=current_unit,
+                    include_calculations=include_report_calculations,
+                )
                 
                 if os.path.exists(report_file):
                     with open(report_file, "rb") as f:
@@ -173,10 +203,10 @@ with col1:
                     
         if 'report_data' in st.session_state:
             st.download_button(
-                label="📥 Download Word Report",
+                label="📥 Download PDF Report",
                 data=st.session_state['report_data'],
-                file_name=f"Mandal_Truss_Analysis_{datetime.date.today()}.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                file_name=f"Mandal_Truss_Analysis_{datetime.date.today()}.pdf",
+                mime="application/pdf"
             )
 
 with col2:
@@ -306,8 +336,26 @@ if 'solved_truss' in st.session_state:
                     else:
                         st.info("Calculate results first to view kinematics.")
 
+st.markdown("---")
+st.header("💬 User Feedback")
+st.caption("Share a quick note to help improve the Professional Truss Suite. Feedback is saved in the repository CSV file.")
 
+with st.form("user_feedback_form", clear_on_submit=True):
+    feedback_rating = st.slider("Overall rating", min_value=1, max_value=5, value=5)
+    feedback_category = st.selectbox(
+        "Feedback category",
+        ["General", "Bug report", "Report quality", "Feature request", "Usability"],
+    )
+    feedback_comments = st.text_area("Comments", placeholder="Write your feedback here...")
+    feedback_submitted = st.form_submit_button("Submit Feedback")
 
-
-
+if feedback_submitted:
+    if feedback_comments.strip():
+        try:
+            save_feedback(feedback_rating, feedback_category, feedback_comments)
+            st.success("Thank you! Your feedback has been saved to feedback.csv.")
+        except OSError as e:
+            st.error(f"Unable to save feedback: {e}")
+    else:
+        st.warning("Please enter a short comment before submitting feedback.")
 
