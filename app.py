@@ -173,10 +173,10 @@ with col1:
                     
         if 'report_data' in st.session_state:
             st.download_button(
-                label="📥 Download Word Report",
+                label="📥 Download PDF Report",
                 data=st.session_state['report_data'],
-                file_name=f"Mandal_Truss_Analysis_{datetime.date.today()}.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                file_name=f"Mandal_Truss_Analysis_{datetime.date.today()}.pdf",
+                mime="application/pdf"
             )
 
 with col2:
