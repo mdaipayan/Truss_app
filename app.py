@@ -4,8 +4,8 @@ import numpy as np
 import plotly.graph_objects as go
 from core_solver import TrussSystem, Node, Member
 import datetime
-import csv
 import os
+from feedback_store import FEEDBACK_FILE, save_feedback
 from visualizer import draw_undeformed_geometry, draw_results_fbd
 
 st.set_page_config(page_title="2D Truss Suite", layout="wide")
@@ -29,22 +29,6 @@ current_scale, current_unit = unit_map[force_display]
 
 fig = go.Figure()
 
-FEEDBACK_FILE = "feedback.csv"
-FEEDBACK_COLUMNS = ["timestamp", "rating", "category", "comments"]
-
-
-def save_feedback(rating, category, comments):
-    file_exists = os.path.exists(FEEDBACK_FILE)
-    with open(FEEDBACK_FILE, "a", newline="", encoding="utf-8") as feedback_file:
-        writer = csv.DictWriter(feedback_file, fieldnames=FEEDBACK_COLUMNS)
-        if not file_exists or os.path.getsize(FEEDBACK_FILE) == 0:
-            writer.writeheader()
-        writer.writerow({
-            "timestamp": datetime.datetime.now().isoformat(timespec="seconds"),
-            "rating": rating,
-            "category": category,
-            "comments": comments.strip(),
-        })
 
 def clear_results():
     if 'solved_truss' in st.session_state:
@@ -338,7 +322,7 @@ if 'solved_truss' in st.session_state:
 
 st.markdown("---")
 st.header("💬 User Feedback")
-st.caption("Share a quick note to help improve the Professional Truss Suite. Feedback is saved in the repository CSV file.")
+st.caption("Share a quick note to help improve the Professional Truss Suite. Feedback is saved to the server-side feedback.csv file next to the app.")
 
 with st.form("user_feedback_form", clear_on_submit=True):
     feedback_rating = st.slider("Overall rating", min_value=1, max_value=5, value=5)
@@ -352,10 +336,20 @@ with st.form("user_feedback_form", clear_on_submit=True):
 if feedback_submitted:
     if feedback_comments.strip():
         try:
-            save_feedback(feedback_rating, feedback_category, feedback_comments)
-            st.success("Thank you! Your feedback has been saved to feedback.csv.")
+            saved_feedback_path = save_feedback(feedback_rating, feedback_category, feedback_comments)
+            st.success(f"Thank you! Your feedback has been saved to {saved_feedback_path.name}.")
+            st.caption(f"Server path: {saved_feedback_path}")
         except OSError as e:
             st.error(f"Unable to save feedback: {e}")
     else:
         st.warning("Please enter a short comment before submitting feedback.")
+
+if FEEDBACK_FILE.exists():
+    with FEEDBACK_FILE.open("rb") as feedback_csv:
+        st.download_button(
+            label="Download feedback CSV",
+            data=feedback_csv,
+            file_name="feedback.csv",
+            mime="text/csv",
+        )
 
