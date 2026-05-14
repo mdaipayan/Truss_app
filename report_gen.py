@@ -10,6 +10,26 @@ from pathlib import Path
 import streamlit as st
 
 
+REFERENCE_TEXT = (
+    "Mandal, D. (2026). Development of an interactive web-based tool for 2D truss "
+    "analysis using the direct stiffness method. Computer Applications in Engineering "
+    "Education, 34(3), e70183."
+)
+REFERENCE_DOI = "https://doi.org/10.1002/cae.70183"
+REFERENCE_BIBTEX = """@article{mandal2026truss,
+  title={Development of an interactive web-based tool for 2D truss analysis using the direct stiffness method},
+  author={Mandal, Daipayan},
+  journal={Computer Applications in Engineering Education},
+  volume={34},
+  number={3},
+  pages={e70183},
+  year={2026},
+  publisher={Wiley},
+  doi={10.1002/cae.70183},
+  url={https://doi.org/10.1002/cae.70183}
+}"""
+
+
 def save_truss_plot(fig, filename):
     try:
         fig.write_image(filename, engine="kaleido", format="png", scale=3, width=1000, height=800)
@@ -127,11 +147,12 @@ def _build_html(truss_system, image_base_path=None, image_res_path=None, scale_f
   img {{ max-width: 100%; max-height: 470px; border: 1px solid #c9d3df; padding: 5px; }}
   figcaption {{ color: #52616f; font-size: 10px; margin-top: 5px; }}
   .note {{ background: #fff8e1; border-left: 4px solid #f5a623; padding: 9px; font-size: 10px; }}
-  footer {{ position: fixed; bottom: -8mm; left: 0; right: 0; color: #6b7280; font-size: 9px; border-top: 1px solid #d9e2ec; padding-top: 4px; }}
+  .reference {{ font-size: 10px; line-height: 1.45; }}
+  .bibtex {{ white-space: pre-wrap; background: #f3f6fa; border: 1px solid #c9d3df; padding: 8px; font-size: 9px; line-height: 1.35; }}
+  .report-footer {{ color: #6b7280; font-size: 9px; border-top: 1px solid #d9e2ec; padding-top: 6px; margin-top: 18px; }}
 </style>
 </head>
 <body>
-  <footer>Professional Truss Suite - Direct Stiffness Method Report</footer>
   <section class="cover">
     <h1>Structural Analysis Report</h1>
     <p class="subtitle">Generated: {_format(generated_at)} | Analysis Type: Linear Static 2D Truss Analysis</p>
@@ -161,6 +182,12 @@ def _build_html(truss_system, image_base_path=None, image_res_path=None, scale_f
 
   <h2>Detailed Analysis Results</h2>
   {_table(["Member", f"Force ({unit_label})", "Nature"], result_rows)}
+
+  <h2>Reference</h2>
+  <p class="reference">{_format(REFERENCE_TEXT)} DOI: <a href="{REFERENCE_DOI}">{REFERENCE_DOI}</a></p>
+  <pre class="bibtex">{_format(REFERENCE_BIBTEX)}</pre>
+
+  <div class="report-footer">Professional Truss Suite - Direct Stiffness Method Report</div>
 </body>
 </html>
 """
@@ -174,11 +201,58 @@ def _chromium_executable():
     return None
 
 
-def _render_pdf_from_html(html_content, html_path, pdf_path):
+def _build_text_report(truss_system, scale_factor=1000.0, unit_label="kN"):
+    lines = [
+        "Structural Analysis Report",
+        f"Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}",
+        "",
+        "Software Specifications",
+        "- Software Name: Professional Truss Suite",
+        "- Core Engine: Direct Stiffness Method (DSM)",
+        "- Analysis Type: Linear Static 2D Truss Analysis",
+        "",
+        "Model Summary",
+        f"- Nodes: {len(truss_system.nodes)}",
+        f"- Members: {len(truss_system.members)}",
+        f"- Force Display Unit: {unit_label}",
+        "",
+        "Nodal Displacements",
+    ]
+    for node in truss_system.nodes:
+        visual_id = getattr(node, "user_id", node.id)
+        lines.append(f"- Node {visual_id}: Ux={node.ux:.6e} m, Uy={node.uy:.6e} m")
+
+    lines.extend(["", "Support Reactions"])
+    has_reactions = False
+    for node in truss_system.nodes:
+        if node.rx == 1 or node.ry == 1:
+            has_reactions = True
+            visual_id = getattr(node, "user_id", node.id)
+            rx_value = round(node.rx_val / scale_factor, 2) if node.rx == 1 else "0.0"
+            ry_value = round(node.ry_val / scale_factor, 2) if node.ry == 1 else "0.0"
+            lines.append(f"- Node {visual_id}: Rx={rx_value} {unit_label}, Ry={ry_value} {unit_label}")
+    if not has_reactions:
+        lines.append("- No rigid support reactions calculated.")
+
+    lines.extend(["", "Detailed Analysis Results"])
+    for mbr in truss_system.members:
+        force = mbr.calculate_force()
+        scaled_force = abs(force) / scale_factor
+        if scaled_force < 0.01:
+            nature = "Zero-Force"
+        else:
+            nature = "Compressive" if force < 0 else "Tensile"
+        lines.append(f"- Member {mbr.id}: {round(scaled_force, 2)} {unit_label}, {nature}")
+
+    lines.extend(["", "Reference", f"{REFERENCE_TEXT} DOI: {REFERENCE_DOI}", "", REFERENCE_BIBTEX])
+    return "\n".join(lines)
+
+
+def _render_pdf_from_html(html_content, html_path, pdf_path, fallback_text):
     html_path.write_text(html_content, encoding="utf-8")
     chromium = _chromium_executable()
     if not chromium:
-        _write_basic_pdf(pdf_path, "Structural Analysis Report\n\nPDF rendering requires Chromium.")
+        _write_basic_pdf(pdf_path, fallback_text)
         return
 
     try:
@@ -198,7 +272,7 @@ def _render_pdf_from_html(html_content, html_path, pdf_path):
         )
     except subprocess.CalledProcessError as exc:
         st.error(f"Chromium PDF Export Error: {exc.stderr or exc}")
-        _write_basic_pdf(pdf_path, "Structural Analysis Report\n\nPDF rendering failed in the current environment.")
+        _write_basic_pdf(pdf_path, fallback_text)
 
 
 def _pdf_escape(text):
@@ -264,9 +338,10 @@ def generate_report(truss_system, fig_base=None, fig_res=None, scale_factor=1000
         scale_factor=scale_factor,
         unit_label=unit_label,
     )
+    fallback_text = _build_text_report(truss_system, scale_factor=scale_factor, unit_label=unit_label)
 
     try:
-        _render_pdf_from_html(html_content, html_path, report_path)
+        _render_pdf_from_html(html_content, html_path, report_path, fallback_text)
     finally:
         for temp_path in (image_base_path, image_res_path, html_path):
             if temp_path.exists():
