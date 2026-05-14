@@ -18,7 +18,7 @@ Unlike commercial "black-box" software (like SAP2000 or STAAD.Pro) that hides th
 * 🎓 **Educational "Glass-Box" Engine:** View step-by-step mathematical formulations including the $4 \times 4$ element stiffness matrices ($k$), the fully assembled unpartitioned global matrix ($K_{global}$), and the reduced partitioned system ($K_{ff} \cdot U_f = F_f$).
 * 📊 **Dynamic Free-Body Diagrams (FBD):** Renders high-fidelity, interactive Plotly graphics displaying undeformed geometry, dynamically scaled load arrows, and separated horizontal/vertical support reaction vectors ($R_x$, $R_y$).
 * 🔄 **Real-Time Unit Scaling:** Seamlessly toggle the visual output between Newtons (N), Kilonewtons (kN), and Meganewtons (MN) without altering the base SI solver engine.
-* 📝 **1-Click Professional Reporting:** Automatically generates a comprehensive `.docx` calculation report containing software metadata, embedded high-resolution graphics, nodal displacements, and categorized member forces.
+* 📝 **1-Click Professional Reporting:** Automatically generates a comprehensive `.pdf` calculation report containing software metadata, embedded high-resolution graphics, nodal displacements, and categorized member forces.
 * 🛡️ **Mathematical Bulletproofing:** Includes strict physics validation (intercepts zero-length members, negative materials) and pre-solve condition number checks to identify structurally unstable mechanisms.
 
 ## 📐 Engineering Methodology
