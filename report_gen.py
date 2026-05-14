@@ -187,7 +187,7 @@ def _build_html(truss_system, image_base_path=None, image_res_path=None, scale_f
   <p class="reference">{_format(REFERENCE_TEXT)} DOI: <a href="{REFERENCE_DOI}">{REFERENCE_DOI}</a></p>
   <pre class="bibtex">{_format(REFERENCE_BIBTEX)}</pre>
 
-  <div class="report-footer">Professional Truss Suite - Direct Stiffness Method Report</div>
+  <div class="report-footer">2D Truss Analysis Suite - Direct Stiffness Method Report</div>
 </body>
 </html>
 """
