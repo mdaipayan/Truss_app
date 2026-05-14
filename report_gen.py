@@ -63,7 +63,139 @@ def _image_html(path, caption):
     """
 
 
-def _build_html(truss_system, image_base_path=None, image_res_path=None, scale_factor=1000.0, unit_label="kN"):
+def _format_number(value):
+    return f"{float(value):.6e}"
+
+
+def _matrix_table(matrix, row_labels=None, col_labels=None):
+    rows = []
+    if col_labels is not None:
+        rows.append(["", *col_labels])
+    for index, row_values in enumerate(matrix):
+        formatted_row = [_format_number(value) for value in row_values]
+        if row_labels is not None:
+            formatted_row.insert(0, row_labels[index])
+        rows.append(formatted_row)
+
+    body = "".join(
+        "<tr>" + "".join(f"<td>{_format(cell)}</td>" for cell in row) + "</tr>"
+        for row in rows
+    )
+    return f"<table class='matrix-table'><tbody>{body}</tbody></table>"
+
+
+def _calculation_details_html(truss_system):
+    sections = [
+        "<h2>Detailed Direct Stiffness Method Calculations</h2>",
+        "<p class='formula'>Element axial stiffness: k_local = (EA/L) [[1, -1], [-1, 1]]</p>",
+        "<p class='formula'>Transformation vector: T = [-c, -s, c, s], with c = Δx/L and s = Δy/L.</p>",
+        "<p class='formula'>Element global stiffness: k_global = (EA/L) TᵀT.</p>",
+    ]
+
+    for mbr in truss_system.members:
+        length = mbr.L or mbr.get_length()
+        c_value = mbr.c
+        s_value = mbr.s
+        axial_stiffness = mbr.E * mbr.A / length
+        local_matrix = [[axial_stiffness, -axial_stiffness], [-axial_stiffness, axial_stiffness]]
+        t_vector = mbr.T_vector if mbr.T_vector is not None else [-c_value, -s_value, c_value, s_value]
+        t_transpose = [[value] for value in t_vector]
+        u_local = mbr.u_local if mbr.u_local is not None else [mbr.node_i.ux, mbr.node_i.uy, mbr.node_j.ux, mbr.node_j.uy]
+        k_global = mbr.k_global_matrix if mbr.k_global_matrix is not None else mbr.get_k_global()
+
+        sections.extend([
+            f"<h3>Member {mbr.id} Full Calculation</h3>",
+            "<p class='formula'>"
+            f"Δx = {_format_number(mbr.node_j.x - mbr.node_i.x)} m, "
+            f"Δy = {_format_number(mbr.node_j.y - mbr.node_i.y)} m, "
+            f"L = {_format_number(length)} m, c = {_format_number(c_value)}, s = {_format_number(s_value)}"
+            "</p>",
+            "<p class='formula'>"
+            f"EA/L = ({_format_number(mbr.E)} × {_format_number(mbr.A)}) / {_format_number(length)} "
+            f"= {_format_number(axial_stiffness)} N/m"
+            "</p>",
+            "<h4>Local stiffness matrix k_local</h4>",
+            _matrix_table(local_matrix, row_labels=["i", "j"], col_labels=["i", "j"]),
+            "<h4>Transformation matrix/vector T</h4>",
+            _matrix_table([t_vector], col_labels=["-c", "-s", "c", "s"]),
+            "<h4>Transpose matrix Tᵀ</h4>",
+            _matrix_table(t_transpose, row_labels=["-c", "-s", "c", "s"]),
+            "<h4>Element global stiffness matrix k_global</h4>",
+            _matrix_table(k_global, row_labels=["uix", "uiy", "ujx", "ujy"], col_labels=["uix", "uiy", "ujx", "ujy"]),
+            "<h4>Member displacement vector and axial force</h4>",
+            _matrix_table([u_local], col_labels=["uix", "uiy", "ujx", "ujy"]),
+            "<p class='formula'>"
+            f"F_axial = (EA/L)(T · u_local) = {_format_number(mbr.internal_force)} N"
+            "</p>",
+        ])
+
+    if truss_system.K_global is not None:
+        dof_labels = [f"DOF {index}" for index in range(truss_system.K_global.shape[0])]
+        sections.extend([
+            "<h3>Assembled Global Stiffness Matrix K_global</h3>",
+            _matrix_table(truss_system.K_global, row_labels=dof_labels, col_labels=dof_labels),
+        ])
+
+    if truss_system.K_reduced is not None:
+        free_labels = [f"DOF {index}" for index in truss_system.free_dofs]
+        sections.extend([
+            "<h3>Reduced System K_ff U_f = F_f</h3>",
+            f"<p class='formula'>Free DOFs: {_format(truss_system.free_dofs)}</p>",
+            "<h4>Reduced stiffness matrix K_ff</h4>",
+            _matrix_table(truss_system.K_reduced, row_labels=free_labels, col_labels=free_labels),
+        ])
+
+    if truss_system.F_reduced is not None:
+        sections.extend([
+            "<h4>Reduced load vector F_f</h4>",
+            _matrix_table([[value] for value in truss_system.F_reduced], row_labels=[f"DOF {index}" for index in truss_system.free_dofs], col_labels=["Force (N)"]),
+        ])
+
+    if truss_system.U_global is not None:
+        sections.extend([
+            "<h3>Solved Global Displacement Vector U_global</h3>",
+            _matrix_table([[value] for value in truss_system.U_global], row_labels=[f"DOF {index}" for index in range(len(truss_system.U_global))], col_labels=["Displacement (m)"]),
+        ])
+
+    return "".join(sections)
+
+
+def _calculation_details_text(truss_system):
+    lines = [
+        "",
+        "Detailed Direct Stiffness Method Calculations",
+        "Element axial stiffness: k_local = (EA/L) [[1, -1], [-1, 1]]",
+        "Transformation vector: T = [-c, -s, c, s] where c = dx/L and s = dy/L",
+        "Element global stiffness: k_global = (EA/L) T^T T",
+    ]
+    for mbr in truss_system.members:
+        length = mbr.L or mbr.get_length()
+        axial_stiffness = mbr.E * mbr.A / length
+        t_vector = mbr.T_vector if mbr.T_vector is not None else [-mbr.c, -mbr.s, mbr.c, mbr.s]
+        u_local = mbr.u_local if mbr.u_local is not None else [mbr.node_i.ux, mbr.node_i.uy, mbr.node_j.ux, mbr.node_j.uy]
+        lines.extend([
+            "",
+            f"Member {mbr.id}",
+            f"dx={_format_number(mbr.node_j.x - mbr.node_i.x)} m, dy={_format_number(mbr.node_j.y - mbr.node_i.y)} m",
+            f"L={_format_number(length)} m, c={_format_number(mbr.c)}, s={_format_number(mbr.s)}",
+            f"EA/L=({_format_number(mbr.E)} * {_format_number(mbr.A)}) / {_format_number(length)} = {_format_number(axial_stiffness)} N/m",
+            f"T={[_format_number(value) for value in t_vector]}",
+            f"T^T={[_format_number(value) for value in t_vector]}",
+            f"u_local={[_format_number(value) for value in u_local]}",
+            f"F_axial=(EA/L)(T.u_local)={_format_number(mbr.internal_force)} N",
+        ])
+    if truss_system.K_global is not None:
+        lines.extend(["", f"K_global shape: {truss_system.K_global.shape}", str(truss_system.K_global)])
+    if truss_system.K_reduced is not None:
+        lines.extend(["", f"Free DOFs: {truss_system.free_dofs}", "K_ff:", str(truss_system.K_reduced)])
+    if truss_system.F_reduced is not None:
+        lines.extend(["F_f:", str(truss_system.F_reduced)])
+    if truss_system.U_global is not None:
+        lines.extend(["U_global:", str(truss_system.U_global)])
+    return "\n".join(lines)
+
+
+def _build_html(truss_system, image_base_path=None, image_res_path=None, scale_factor=1000.0, unit_label="kN", include_calculations=False):
     software_rows = [
         ("Software Name", "Professional Truss Suite"),
         ("Developer", "Mr. D Mandal, Assistant Professor, KITS Ramtek"),
@@ -122,6 +254,7 @@ def _build_html(truss_system, image_base_path=None, image_res_path=None, scale_f
         if reaction_rows
         else "<p class='note'>No rigid support reactions calculated.</p>"
     )
+    calculation_details_html = _calculation_details_html(truss_system) if include_calculations else ""
 
     generated_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     return f"""
@@ -148,6 +281,11 @@ def _build_html(truss_system, image_base_path=None, image_res_path=None, scale_f
   figcaption {{ color: #52616f; font-size: 10px; margin-top: 5px; }}
   .note {{ background: #fff8e1; border-left: 4px solid #f5a623; padding: 9px; font-size: 10px; }}
   .reference {{ font-size: 10px; line-height: 1.45; }}
+  .formula {{ font-size: 10px; line-height: 1.45; }}
+  h3 {{ color: #305f89; font-size: 13px; margin: 16px 0 7px; }}
+  h4 {{ color: #40566b; font-size: 11px; margin: 10px 0 5px; }}
+  .matrix-table {{ font-family: "Courier New", monospace; font-size: 8px; page-break-inside: avoid; }}
+  .matrix-table td {{ padding: 4px; }}
   .bibtex {{ white-space: pre-wrap; background: #f3f6fa; border: 1px solid #c9d3df; padding: 8px; font-size: 9px; line-height: 1.35; }}
   .report-footer {{ color: #6b7280; font-size: 9px; border-top: 1px solid #d9e2ec; padding-top: 6px; margin-top: 18px; }}
 </style>
@@ -183,11 +321,13 @@ def _build_html(truss_system, image_base_path=None, image_res_path=None, scale_f
   <h2>Detailed Analysis Results</h2>
   {_table(["Member", f"Force ({unit_label})", "Nature"], result_rows)}
 
+  {calculation_details_html}
+
   <h2>Reference</h2>
   <p class="reference">{_format(REFERENCE_TEXT)} DOI: <a href="{REFERENCE_DOI}">{REFERENCE_DOI}</a></p>
   <pre class="bibtex">{_format(REFERENCE_BIBTEX)}</pre>
 
-  <div class="report-footer">2D Truss Analysis Suite - Direct Stiffness Method Report</div>
+  <div class="report-footer">Professional Truss Suite - Direct Stiffness Method Report</div>
 </body>
 </html>
 """
@@ -201,7 +341,7 @@ def _chromium_executable():
     return None
 
 
-def _build_text_report(truss_system, scale_factor=1000.0, unit_label="kN"):
+def _build_text_report(truss_system, scale_factor=1000.0, unit_label="kN", include_calculations=False):
     lines = [
         "Structural Analysis Report",
         f"Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}",
@@ -243,6 +383,9 @@ def _build_text_report(truss_system, scale_factor=1000.0, unit_label="kN"):
         else:
             nature = "Compressive" if force < 0 else "Tensile"
         lines.append(f"- Member {mbr.id}: {round(scaled_force, 2)} {unit_label}, {nature}")
+
+    if include_calculations:
+        lines.append(_calculation_details_text(truss_system))
 
     lines.extend(["", "Reference", f"{REFERENCE_TEXT} DOI: {REFERENCE_DOI}", "", REFERENCE_BIBTEX])
     return "\n".join(lines)
@@ -316,7 +459,7 @@ def _write_basic_pdf(pdf_path, text):
         )
 
 
-def generate_report(truss_system, fig_base=None, fig_res=None, scale_factor=1000.0, unit_label="kN"):
+def generate_report(truss_system, fig_base=None, fig_res=None, scale_factor=1000.0, unit_label="kN", include_calculations=False):
     uid = str(uuid.uuid4())[:8]
     image_base_path = Path(f"temp_base_{uid}.png")
     image_res_path = Path(f"temp_res_{uid}.png")
@@ -337,8 +480,14 @@ def generate_report(truss_system, fig_base=None, fig_res=None, scale_factor=1000
         image_res_path=result_image_for_html,
         scale_factor=scale_factor,
         unit_label=unit_label,
+        include_calculations=include_calculations,
     )
-    fallback_text = _build_text_report(truss_system, scale_factor=scale_factor, unit_label=unit_label)
+    fallback_text = _build_text_report(
+        truss_system,
+        scale_factor=scale_factor,
+        unit_label=unit_label,
+        include_calculations=include_calculations,
+    )
 
     try:
         _render_pdf_from_html(html_content, html_path, report_path, fallback_text)

@@ -174,13 +174,25 @@ with col1:
         st.header("3. Export Results")
         from report_gen import generate_report
         ts_solved = st.session_state['solved_truss']
+        include_report_calculations = st.checkbox(
+            "Include full DSM formulas and matrix calculations",
+            value=False,
+            help="Adds local stiffness matrices, transformation transpose matrices, global stiffness matrices, and displacement calculations to the PDF report.",
+        )
         
         if st.button("🚀 Prepare Professional Report"):
             with st.spinner("Generating Professional Report..."):
                 current_res_fig = st.session_state.get('current_fig', fig)
                 current_base_fig = st.session_state.get('base_fig', None)
                 
-                report_file = generate_report(ts_solved, fig_base=current_base_fig, fig_res=current_res_fig, scale_factor=current_scale, unit_label=current_unit)
+                report_file = generate_report(
+                    ts_solved,
+                    fig_base=current_base_fig,
+                    fig_res=current_res_fig,
+                    scale_factor=current_scale,
+                    unit_label=current_unit,
+                    include_calculations=include_report_calculations,
+                )
                 
                 if os.path.exists(report_file):
                     with open(report_file, "rb") as f:
