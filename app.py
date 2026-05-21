@@ -55,8 +55,10 @@ with col1:
             [2, 5, 0.01, 2e11], [2, 4, 0.01, 2e11], [2, 6, 0.01, 2e11]   
         ], columns=["Node_I", "Node_J", "Area(sq.m)", "E (N/sq.m)"])
         
+        # Benchmark load case (reproduces Table 2 of Mandal, 2026, CAEE):
+        #   Node 5: 300 kN downward (Fy = -300000 N)  |  Node 4: 10 kN horizontal (Fx = +10000 N)
         st.session_state['loads_data'] = pd.DataFrame([
-            [5, 0.0, -100000.0], [4, 10000.0, 0.0]    
+            [5, 0.0, -300000.0], [4, 10000.0, 0.0]    
         ], columns=["Node_ID", "Force_X (N)", "Force_Y (N)"])
         
         clear_results()
@@ -352,4 +354,3 @@ if FEEDBACK_FILE.exists():
             file_name="feedback.csv",
             mime="text/csv",
         )
-
