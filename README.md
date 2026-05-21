@@ -14,6 +14,8 @@ The **Professional Truss Suite** is an interactive, web-based environment for th
 
 Unlike commercial "black-box" software (like SAP2000 or STAAD.Pro) that hides the underlying mathematics, this application is designed as a **"Glass-Box" educational tool**. It explicitly bridges the gap between finite element theory and computational execution, allowing students to observe the formulation of local and global stiffness matrices in real-time.
 
+> **📌 Benchmark note:** The built-in *9-Member Pratt Truss Benchmark* applies **300 kN downward at Node 5** and **10 kN horizontal at Node 4**, reproducing Table 2 of the published paper (Mandal, 2026, *CAEE*, [10.1002/cae.70183](https://doi.org/10.1002/cae.70183)).
+
 ## ✨ Key Features
 * 🎓 **Educational "Glass-Box" Engine:** View step-by-step mathematical formulations including the $4 \times 4$ element stiffness matrices ($k$), the fully assembled unpartitioned global matrix ($K_{global}$), and the reduced partitioned system ($K_{ff} \cdot U_f = F_f$).
 * 📊 **Dynamic Free-Body Diagrams (FBD):** Renders high-fidelity, interactive Plotly graphics displaying undeformed geometry, dynamically scaled load arrows, and separated horizontal/vertical support reaction vectors ($R_x$, $R_y$).
@@ -36,8 +38,18 @@ The core solver relies on standard matrix structural analysis:
 ### Instructions
 1. **Clone the repository:**
    ```bash
-   git clone [https://github.com/mdaipayan/Truss_app.git](https://github.com/mdaipayan/Truss_app.git)
+   git clone https://github.com/mdaipayan/Truss_app.git
    cd Truss_app
+   ```
+2. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. **Run the application:**
+   ```bash
+   streamlit run app.py
+   ```
+
 ## 📚 How to Cite
 
 If you use the Professional Truss Suite in your teaching, research, or structural analysis projects, please cite the official publication in **Computer Applications in Engineering Education**:
@@ -56,5 +68,6 @@ If you use the Professional Truss Suite in your teaching, research, or structura
   year={2026},
   publisher={Wiley},
   doi={10.1002/cae.70183},
-  url={[https://doi.org/10.1002/cae.70183](https://doi.org/10.1002/cae.70183)}
+  url={https://doi.org/10.1002/cae.70183}
 }
+```
