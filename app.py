@@ -246,6 +246,72 @@ with col2:
             st.info("👈 Input loads and click 'Calculate Results' to view the force diagram.")
 
 # ---------------------------------------------------------
+# RESULTS SUMMARY & EQUILIBRIUM CHECK (student-facing)
+# ---------------------------------------------------------
+if 'solved_truss' in st.session_state:
+    ts = st.session_state['solved_truss']
+    st.markdown("---")
+    st.header("📋 Results Summary")
+
+    # --- Global equilibrium check: applied loads + reactions should sum to ~0 ---
+    applied_fx = sum(v for d, v in ts.loads.items() if d % 2 == 0)
+    applied_fy = sum(v for d, v in ts.loads.items() if d % 2 == 1)
+    react_fx = sum(n.rx_val for n in ts.nodes)
+    react_fy = sum(n.ry_val for n in ts.nodes)
+    res_x = applied_fx + react_fx
+    res_y = applied_fy + react_fy
+    ref = max(abs(applied_fx), abs(applied_fy), abs(react_fx), abs(react_fy), 1.0)
+    ok_eq = abs(res_x) < 1e-6 * ref + 1e-9 and abs(res_y) < 1e-6 * ref + 1e-9
+
+    st.caption("Static equilibrium verification — the sum of all applied loads and support reactions must be zero.")
+    e1, e2, e3 = st.columns(3)
+    e1.metric(f"Σ Fx residual ({current_unit})", f"{res_x / current_scale:.3e}")
+    e2.metric(f"Σ Fy residual ({current_unit})", f"{res_y / current_scale:.3e}")
+    with e3:
+        if ok_eq:
+            st.success("✓ Equilibrium satisfied (Σ F ≈ 0)")
+        else:
+            st.warning("⚠️ Non-zero residual — recheck the model.")
+
+    r_tab1, r_tab2, r_tab3 = st.tabs(["🔧 Member Forces", "📍 Nodal Displacements", "🟢 Support Reactions"])
+
+    with r_tab1:
+        _forces = [m.internal_force for m in ts.members]
+        _maxf = max((abs(v) for v in _forces), default=0.0)
+        _tol = max(1e-6, 1e-4 * _maxf)
+        _mrows = []
+        for m in ts.members:
+            f = m.internal_force
+            nature = "Zero-Force" if abs(f) < _tol else ("Compression" if f < 0 else "Tension")
+            _mrows.append({
+                "Member": f"M{m.id}",
+                "Connectivity": f"{m.node_i.id} → {m.node_j.id}",
+                "Length (m)": round(m.L, 4),
+                f"Axial Force ({current_unit})": round(f / current_scale, 4),
+                "Nature": nature,
+            })
+        st.dataframe(pd.DataFrame(_mrows), use_container_width=True, hide_index=True)
+        st.caption("Sign convention: positive = Tension, negative = Compression.")
+
+    with r_tab2:
+        _drows = [{"Node": n.id, "Ux (m)": f"{n.ux:.6e}", "Uy (m)": f"{n.uy:.6e}"} for n in ts.nodes]
+        st.dataframe(pd.DataFrame(_drows), use_container_width=True, hide_index=True)
+
+    with r_tab3:
+        _rrows = []
+        for n in ts.nodes:
+            if n.rx or n.ry:
+                _rrows.append({
+                    "Node": n.id,
+                    f"Rx ({current_unit})": round(n.rx_val / current_scale, 4) if n.rx else "—",
+                    f"Ry ({current_unit})": round(n.ry_val / current_scale, 4) if n.ry else "—",
+                })
+        if _rrows:
+            st.dataframe(pd.DataFrame(_rrows), use_container_width=True, hide_index=True)
+        else:
+            st.info("No support reactions (no restrained nodes defined).")
+
+# ---------------------------------------------------------
 # NEW SECTION: THE "GLASS BOX" PEDAGOGICAL EXPLORER
 # ---------------------------------------------------------
 if 'solved_truss' in st.session_state:
@@ -325,11 +391,24 @@ if 'solved_truss' in st.session_state:
         
         with colC:
             st.markdown("**Degree of Freedom (DOF) Mapping**")
-            st.write(f"- **Free DOFs ($f$):** `{ts.free_dofs}`")
-            st.write(f"- **Restrained DOFs ($s$):** `{[i for i in range(2*len(ts.nodes)) if i not in ts.free_dofs]}`")
-            
-            st.markdown("**Active Load Vector ($F_f$)**")
-            st.dataframe(fmt(pd.DataFrame(ts.F_reduced, columns=["Force"]), "{:.2e}"))
+            st.caption("Each global DOF belongs to one node and one direction. Indices are 0-based: DOF 0 = Node 1 (x), DOF 1 = Node 1 (y), and so on.")
+            _free_set = set(ts.free_dofs)
+            _dofrows = [{
+                "DOF": d,
+                "Node": d // 2 + 1,
+                "Direction": "x (horizontal)" if d % 2 == 0 else "y (vertical)",
+                "Status": "Free" if d in _free_set else "Restrained",
+            } for d in range(2 * len(ts.nodes))]
+            st.dataframe(pd.DataFrame(_dofrows), use_container_width=True, hide_index=True)
+
+            st.markdown("**Active Load Vector ($F_f$)** — applied forces at the free DOFs")
+            _ffrows = [{
+                "DOF": d,
+                "Node": d // 2 + 1,
+                "Direction": "x" if d % 2 == 0 else "y",
+                f"Force ({current_unit})": round(float(ts.F_reduced[i]) / current_scale, 4),
+            } for i, d in enumerate(ts.free_dofs)]
+            st.dataframe(pd.DataFrame(_ffrows), use_container_width=True, hide_index=True)
 
         with colD:
             st.markdown("**Matrix Partitioning Theory:**")
