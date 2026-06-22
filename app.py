@@ -11,6 +11,27 @@ from visualizer import draw_undeformed_geometry, draw_results_fbd
 st.set_page_config(page_title="2D Truss Suite", layout="wide")
 st.title("🏗️ 2D Truss Analysis Developed by D Mandal")
 
+
+def fmt(df, pattern):
+    """Display a numeric DataFrame with a format pattern.
+
+    Uses the pandas Styler when jinja2 is available (nicer alignment); falls
+    back to plain string formatting otherwise so the app never crashes on a
+    missing optional dependency.
+    """
+    try:
+        return df.style.format(pattern)
+    except (AttributeError, ImportError, ModuleNotFoundError):
+        def _f(v):
+            try:
+                return pattern.format(v)
+            except (ValueError, TypeError):
+                return v
+        # .map is the modern element-wise API (pandas >= 2.1); fall back to
+        # .applymap on older versions.
+        elementwise = getattr(df, "map", None) or df.applymap
+        return elementwise(_f)
+
 st.sidebar.header("⚙️ Display Settings")
 st.sidebar.info("The solver engine always calculates using base SI units (Newtons, meters). Use this setting to scale the visual output on the diagrams.")
 
@@ -238,32 +259,60 @@ if 'solved_truss' in st.session_state:
     
     # ------------------ TAB 1 ------------------
     with gb_tab1:
-        st.subheader("Local Element Formulation")
-        if ts.members: 
+        st.subheader("From Local to Global Element Stiffness")
+        st.caption("The element stiffness is first written in the member's own (local) axis, then rotated into global X–Y coordinates via the transformation matrix.")
+        if ts.members:
             mbr_opts = [f"Member {m.id}" for m in ts.members]
             sel_mbr = st.selectbox("Select Member to inspect kinematics and stiffness:", mbr_opts, key="gb_tab1")
-            
+
             if sel_mbr and isinstance(sel_mbr, str) and " " in sel_mbr:
                 selected_id = int(sel_mbr.split(" ")[1])
                 m = next((m for m in ts.members if m.id == selected_id), None)
-                
+
                 if m and m.k_global_matrix is not None:
+                    c, s, L = m.c, m.s, m.L
+                    ea_l = m.E * m.A / L
+
+                    # Step 1 — Kinematics
+                    st.markdown("##### Step 1 · Member Kinematics (Trigonometry)")
+                    k1, k2, k3, k4 = st.columns(4)
+                    k1.metric("Length L (m)", f"{L:.4f}")
+                    k2.metric("c = cos θ", f"{c:.4f}")
+                    k3.metric("s = sin θ", f"{s:.4f}")
+                    k4.metric("EA/L (N/m)", f"{ea_l:.3e}")
+
+                    st.markdown("---")
                     colA, colB = st.columns(2)
+
+                    # Step 2 — Local stiffness matrix (element axis: axial only)
                     with colA:
-                        st.markdown("**Member Kinematics (Trigonometry)**")
-                        st.write(f"- **Length ($L$):** `{m.L:.4f} m`")
-                        st.write(f"- **Dir. Cosine ($c = \\cos\\theta$):** `{m.c:.4f}`")
-                        st.write(f"- **Dir. Sine ($s = \\sin\\theta$):** `{m.s:.4f}`")
-                        
-                        st.markdown("**Transformation Vector ($T$):**")
-                        st.latex(r"T = \begin{bmatrix} -c & -s & c & s \end{bmatrix}")
-                        st.dataframe(pd.DataFrame([m.T_vector], columns=["-c", "-s", "c", "s"]).style.format("{:.4f}"))
-                    
+                        st.markdown("##### Step 2 · Local Stiffness Matrix $k_{local}$")
+                        st.caption("In the member's own axis the bar carries axial force only (2 DOF).")
+                        st.latex(r"k_{local} = \frac{EA}{L} \begin{bmatrix} 1 & -1 \\ -1 & 1 \end{bmatrix}")
+                        k_local = (ea_l) * np.array([[1.0, -1.0], [-1.0, 1.0]])
+                        st.dataframe(fmt(pd.DataFrame(k_local, index=["i", "j"], columns=["i", "j"]), "{:.2e}"))
+
+                        st.markdown("##### Step 3 · Transformation Matrix $T$")
+                        st.caption("Maps the 2 local axial DOF to the 4 global (x, y) DOF.")
+                        st.latex(r"T = \begin{bmatrix} c & s & 0 & 0 \\ 0 & 0 & c & s \end{bmatrix}")
+                        T_mat = np.array([[c, s, 0.0, 0.0], [0.0, 0.0, c, s]])
+                        st.dataframe(fmt(pd.DataFrame(T_mat, index=["i", "j"], columns=["uix", "uiy", "ujx", "ujy"]), "{:.4f}"))
+
+                    # Step 4 — Global element stiffness via congruence transform
                     with colB:
-                        st.markdown("**Local Stiffness Matrix ($k_{global}$)**")
-                        st.latex(r"k = \frac{EA}{L} \begin{bmatrix} c^2 & cs & -c^2 & -cs \\ cs & s^2 & -cs & -s^2 \\ -c^2 & -cs & c^2 & cs \\ -cs & -s^2 & cs & s^2 \end{bmatrix}")
-                        df_k = pd.DataFrame(m.k_global_matrix)
-                        st.dataframe(df_k.style.format("{:.2e}"))
+                        st.markdown("##### Step 4 · Global Stiffness Matrix $k_{global}$")
+                        st.caption("Rotate the local matrix into global axes.")
+                        st.latex(r"k_{global} = T^{\mathsf{T}}\, k_{local}\, T = \frac{EA}{L}\begin{bmatrix} c^2 & cs & -c^2 & -cs \\ cs & s^2 & -cs & -s^2 \\ -c^2 & -cs & c^2 & cs \\ -cs & -s^2 & cs & s^2 \end{bmatrix}")
+                        k_from_T = T_mat.T @ k_local @ T_mat
+                        df_k = pd.DataFrame(k_from_T, index=["uix", "uiy", "ujx", "ujy"], columns=["uix", "uiy", "ujx", "ujy"])
+                        st.dataframe(fmt(df_k, "{:.2e}"))
+                        # Confirm this matches what the solver actually assembled.
+                        if np.allclose(k_from_T, m.k_global_matrix):
+                            st.success("✓ Matches the matrix the solver assembled into $K_{global}$.")
+                        else:
+                            st.warning("Mismatch with solver matrix — check inputs.")
+
+                    st.info("Note: the **force-recovery vector** $T_f = [-c,\\ -s,\\ c,\\ s]$ used later to extract axial force (Tab 3) is related but distinct from the transformation matrix $T$ above.")
                 else:
                     st.error("Matrix not found.")
         else:
@@ -280,17 +329,17 @@ if 'solved_truss' in st.session_state:
             st.write(f"- **Restrained DOFs ($s$):** `{[i for i in range(2*len(ts.nodes)) if i not in ts.free_dofs]}`")
             
             st.markdown("**Active Load Vector ($F_f$)**")
-            st.dataframe(pd.DataFrame(ts.F_reduced, columns=["Force"]).style.format("{:.2e}"))
+            st.dataframe(fmt(pd.DataFrame(ts.F_reduced, columns=["Force"]), "{:.2e}"))
 
         with colD:
             st.markdown("**Matrix Partitioning Theory:**")
             st.latex(r"\begin{bmatrix} F_f \\ F_s \end{bmatrix} = \begin{bmatrix} K_{ff} & K_{fs} \\ K_{sf} & K_{ss} \end{bmatrix} \begin{bmatrix} U_f \\ U_s \end{bmatrix}")
             
             with st.expander("View Full Unpartitioned Global Matrix ($K_{global}$)", expanded=True):
-                st.dataframe(pd.DataFrame(ts.K_global).style.format("{:.2e}"))
+                st.dataframe(fmt(pd.DataFrame(ts.K_global), "{:.2e}"))
                 
             with st.expander("View Reduced Stiffness Matrix ($K_{ff}$)", expanded=False):
-                st.dataframe(pd.DataFrame(ts.K_reduced).style.format("{:.2e}"))
+                st.dataframe(fmt(pd.DataFrame(ts.K_reduced), "{:.2e}"))
                 
     # ------------------ TAB 3 ------------------
     with gb_tab3:
@@ -301,7 +350,7 @@ if 'solved_truss' in st.session_state:
             st.markdown("**1. Global Displacement Vector ($U_{global}$)**")
             st.latex(r"U_f = K_{ff}^{-1} F_f \implies \text{Stitch with } U_s = 0")
             if hasattr(ts, 'U_global') and ts.U_global is not None:
-                st.dataframe(pd.DataFrame(ts.U_global, columns=["Displacement (m)"]).style.format("{:.6e}"))
+                st.dataframe(fmt(pd.DataFrame(ts.U_global, columns=["Displacement (m)"]), "{:.6e}"))
             else:
                 st.info("Update core_solver.py to calculate U_global.")
                 
@@ -316,7 +365,7 @@ if 'solved_truss' in st.session_state:
                         st.latex(r"F_{axial} = \frac{EA}{L} \cdot (T \cdot u_{local})")
                         
                         st.markdown("**Local Displacements ($u_{local}$):**")
-                        st.dataframe(pd.DataFrame([m.u_local], columns=["uix", "uiy", "ujx", "ujy"]).style.format("{:.6e}"))
+                        st.dataframe(fmt(pd.DataFrame([m.u_local], columns=["uix", "uiy", "ujx", "ujy"]), "{:.6e}"))
                         
                         st.success(f"**Calculated Axial Force:** {m.internal_force:.2f} N")
                     else:

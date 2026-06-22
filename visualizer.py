@@ -102,34 +102,42 @@ def draw_results_fbd(ts, scale_factor=1000.0, unit_label="kN"):
     """Generates the solved free-body diagram figure with separated reactions."""
     fig_res = go.Figure()
     
+    # Zero-force detection must be based on the BASE SI force (Newtons), never the
+    # display-scaled value, otherwise a real member could be tagged "Zero-Force"
+    # in MN view but "Tensile" in N view. Use a relative tolerance against the
+    # largest member force, with a small absolute floor for fully unloaded trusses.
+    member_forces = [mbr.calculate_force() for mbr in ts.members]
+    max_abs_force = max((abs(v) for v in member_forces), default=0.0)
+    zero_tol = max(1e-6, 1e-4 * max_abs_force)  # in Newtons
+
     # Plot Members with Forces
-    for mbr in ts.members:
-        f = mbr.calculate_force()
+    for mbr, f in zip(ts.members, member_forces):
         val_scaled = round(abs(f) / scale_factor, 2)
-        
-        # Determine Color and Nature
-        if val_scaled < 0.01:
+        is_zero = abs(f) < zero_tol
+
+        # Determine Color and Nature (classification uses base SI force)
+        if is_zero:
             nature, color = "Zero-Force", "darkgray"
         else:
             nature = "Compressive" if f < 0 else "Tensile"
             color = "crimson" if f < 0 else "royalblue"
-        
+
         x0, y0, x1, y1 = mbr.node_i.x, mbr.node_i.y, mbr.node_j.x, mbr.node_j.y
         mid_x, mid_y = (x0 + x1) / 2, (y0 + y1) / 2
-        
+
         dx, dy = x1 - x0, y1 - y0
         angle_deg = np.degrees(np.arctan2(dy, dx))
         if angle_deg > 90: angle_deg -= 180
         elif angle_deg < -90: angle_deg += 180
-        
+
         fig_res.add_trace(go.Scatter(x=[x0, x1], y=[y0, y1], mode='lines', line=dict(color=color, width=8), showlegend=False))
-        
-        # Add labels based on scaled value
-        if val_scaled >= 0.01: 
+
+        # Add labels (classification drives the styling; value shown in display units)
+        if not is_zero:
             label_html = f"<b>{val_scaled} {unit_label}</b><br><i>{nature}</i>"
             fig_res.add_annotation(x=mid_x, y=mid_y, text=label_html, showarrow=False, textangle=-angle_deg, yshift=25, font=dict(color=color, size=12), bgcolor="rgba(255,255,255,0.9)", bordercolor=color, borderwidth=2, borderpad=3)
         else:
-            fig_res.add_annotation(x=mid_x, y=mid_y, text=f"0.0 {unit_label}", showarrow=False, font=dict(color="gray", size=10), bgcolor="white")
+            fig_res.add_annotation(x=mid_x, y=mid_y, text=f"0.0 {unit_label}<br><i>Zero-Force</i>", showarrow=False, font=dict(color="gray", size=10), bgcolor="white")
 
     # Draw Nodes and Separated Support Reactions
     for node in ts.nodes:
@@ -144,6 +152,35 @@ def draw_results_fbd(ts, scale_factor=1000.0, unit_label="kN"):
             ry_scaled = round(node.ry_val / scale_factor, 2)
             ay_val = 50 if ry_scaled >= 0 else -50
             fig_res.add_annotation(x=node.x, y=node.y, text=f"<b>Ry: {abs(ry_scaled)} {unit_label}</b>", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=3, arrowcolor="darkgreen", ax=0, ay=ay_val, font=dict(color="white", size=11), bgcolor="darkgreen")
+
+    # --- Deformed-shape overlay (exaggerated) -------------------------------
+    # Displacements are tiny for stiff trusses, so auto-scale them to a visible
+    # fraction of the model size. This is a teaching visual; the magnification
+    # factor is reported so students know it is not true-to-scale.
+    max_disp = max((max(abs(n.ux), abs(n.uy)) for n in ts.nodes), default=0.0)
+    if max_disp > 0:
+        xs = [n.x for n in ts.nodes]
+        ys = [n.y for n in ts.nodes]
+        model_size = max(max(xs) - min(xs), max(ys) - min(ys), 1e-9)
+        # Target the largest displacement at ~12% of the model size.
+        mag = (0.12 * model_size) / max_disp
+
+        legend_shown = False
+        for mbr in ts.members:
+            dx0, dy0 = mbr.node_i.x + mag * mbr.node_i.ux, mbr.node_i.y + mag * mbr.node_i.uy
+            dx1, dy1 = mbr.node_j.x + mag * mbr.node_j.ux, mbr.node_j.y + mag * mbr.node_j.uy
+            fig_res.add_trace(go.Scatter(
+                x=[dx0, dx1], y=[dy0, dy1], mode='lines',
+                line=dict(color='rgba(60,60,60,0.55)', width=2, dash='dot'),
+                name='Deformed shape', legendgroup='deformed',
+                showlegend=not legend_shown, hoverinfo='skip'))
+            legend_shown = True
+
+        fig_res.add_annotation(
+            xref="paper", yref="paper", x=0.01, y=0.99, showarrow=False,
+            text=f"<i>Deformed shape ×{mag:,.0f} (exaggerated)</i>",
+            font=dict(color="dimgray", size=11), align="left",
+            bgcolor="rgba(255,255,255,0.7)")
 
     fig_res.update_layout(yaxis=dict(scaleanchor="x", scaleratio=1), plot_bgcolor='rgb(240, 242, 246)', margin=dict(l=0, r=0, t=30, b=0))
     return fig_res
