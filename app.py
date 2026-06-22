@@ -11,11 +11,39 @@ import visitor_log
 
 st.set_page_config(page_title="2D Truss Suite", layout="wide")
 
-# Record this visit once per browser session (anonymous; safe no-op if the
-# Google Sheet credentials are not configured).
-visitor_log.log_visit()
+
+def _user_field(field):
+    """Safely read a field from st.user (dict-like)."""
+    try:
+        return st.user.get(field, "") or ""
+    except Exception:
+        try:
+            return getattr(st.user, field, "") or ""
+        except Exception:
+            return ""
+
+
+# --- Google sign-in gate (only enforced when [auth] is configured) ---------
+_AUTH_ON = visitor_log.auth_configured() and hasattr(st, "user")
+if _AUTH_ON and not st.user.is_logged_in:
+    st.title("🏗️ 2D Truss Analysis Developed by D Mandal")
+    st.info("Please sign in with your Google account to access the Truss Suite.")
+    st.button("🔐 Sign in with Google", type="primary", on_click=st.login)
+    st.caption("Your name and email are recorded only so the developer can see who uses the tool.")
+    st.stop()
+
+# Record this visit once per browser session — with verified identity if the
+# user signed in, anonymous otherwise. Safe no-op if logging isn't configured.
+if _AUTH_ON and st.user.is_logged_in:
+    visitor_log.log_visit(name=_user_field("name"), email=_user_field("email"))
+else:
+    visitor_log.log_visit()
 
 st.title("🏗️ 2D Truss Analysis Developed by D Mandal")
+if _AUTH_ON and st.user.is_logged_in:
+    _who = _user_field("name") or _user_field("email")
+    st.sidebar.success(f"Signed in as {_who}")
+    st.sidebar.button("Log out", on_click=st.logout)
 
 
 def fmt(df, pattern):

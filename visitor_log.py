@@ -26,7 +26,7 @@ import uuid
 
 import streamlit as st
 
-SHEET_HEADER = ["timestamp_utc", "session_id", "event"]
+SHEET_HEADER = ["timestamp_utc", "session_id", "event", "name", "email"]
 _SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 
@@ -35,6 +35,11 @@ def _secret_has(key):
         return key in st.secrets
     except Exception:
         return False
+
+
+def auth_configured():
+    """True if Google sign-in ([auth] block) is set up in secrets."""
+    return _secret_has("auth")
 
 
 def _secret_get(key, default=None):
@@ -98,10 +103,12 @@ def is_configured():
     return _get_worksheet() is not None
 
 
-def log_visit():
+def log_visit(name="", email=""):
     """Record a single visit for this browser session (idempotent per session).
 
-    Safe no-op when logging is not configured or the network call fails.
+    If the visitor signed in with Google, pass their verified name/email to store
+    them alongside the timestamp. Safe no-op when logging is not configured or
+    the network call fails.
     """
     if st.session_state.get("_visit_logged"):
         return
@@ -123,7 +130,8 @@ def log_visit():
             "%Y-%m-%d %H:%M:%S UTC"
         )
         worksheet.append_row(
-            [timestamp, session_id, "visit"], value_input_option="USER_ENTERED"
+            [timestamp, session_id, "visit", name or "", email or ""],
+            value_input_option="USER_ENTERED",
         )
     except Exception:
         # Logging must never break the app for a visitor.

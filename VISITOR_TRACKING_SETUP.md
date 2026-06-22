@@ -64,8 +64,53 @@ pip install -r requirements.txt
 
 ## Notes
 - "Per session" means one row per browser tab/session, not per page rerun.
-- Your own visits are counted too — there's no way to perfectly distinguish you
-  from others without a login. You can identify your sessions by the times you
-  opened the app, or filter them out in the downloaded CSV.
 - If the Sheet/credentials are ever unreachable, logging silently skips so
   visitors are never affected.
+
+---
+
+# Part B — Verified identity via Google sign-in (optional)
+
+With this enabled, visitors must sign in with Google before using the app, and
+each logged visit includes their **verified name and email**. If you do NOT add
+the `[auth]` block, the app simply runs without a login wall (anonymous logging).
+
+> Note: this uses a Google **OAuth Client ID**, which is a *different* credential
+> from the service account in Part A.
+
+## Step 1 — Create an OAuth Client ID
+1. Google Cloud Console → APIs & Services → **OAuth consent screen**. Configure
+   it (User type "External" is fine), add yourself as a test user, and save.
+2. APIs & Services → **Credentials → Create credentials → OAuth client ID**.
+3. Application type: **Web application**.
+4. Under **Authorized redirect URIs**, add the URLs your app runs at, each ending
+   in `/oauth2callback`:
+   - Local: `http://localhost:8501/oauth2callback`
+   - Cloud: `https://YOUR-APP.streamlit.app/oauth2callback`
+5. Create, then copy the **Client ID** and **Client secret**.
+
+## Step 2 — Fill in the [auth] secrets
+In `.streamlit/secrets.toml` (and/or the Streamlit Cloud Secrets box), complete
+the `[auth]` block:
+- `client_id` / `client_secret` — from Step 1.
+- `redirect_uri` — must exactly match one you registered (use the localhost one
+  for local runs, the streamlit.app one when deployed).
+- `cookie_secret` — a long random string (already generated in your local file;
+  regenerate with `python -c "import secrets; print(secrets.token_hex(32))"`).
+
+## Step 3 — Install deps and run
+```bash
+pip install -r requirements.txt   # adds Authlib, bumps Streamlit to >= 1.42
+streamlit run app.py
+```
+You'll see a "Sign in with Google" screen. After signing in, your visit (name +
+email) is recorded, and a "Log out" button appears in the sidebar.
+
+## Notes on sign-in
+- Requires Streamlit >= 1.42.
+- While the OAuth consent screen is in "Testing" mode, only the test users you
+  added can sign in. To open it to everyone, publish the consent screen
+  (may require Google verification depending on scopes; basic name/email is light).
+- The login wall reduces casual usage — anyone who won't sign in can't use the
+  tool. To make login optional instead, tell the developer and it's a small change
+  (remove the `st.stop()` gate, keep a "Sign in" button).
