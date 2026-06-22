@@ -7,8 +7,14 @@ import datetime
 import os
 from feedback_store import FEEDBACK_FILE, save_feedback
 from visualizer import draw_undeformed_geometry, draw_results_fbd
+import visitor_log
 
 st.set_page_config(page_title="2D Truss Suite", layout="wide")
+
+# Record this visit once per browser session (anonymous; safe no-op if the
+# Google Sheet credentials are not configured).
+visitor_log.log_visit()
+
 st.title("🏗️ 2D Truss Analysis Developed by D Mandal")
 
 
@@ -47,6 +53,32 @@ unit_map = {
     "Meganewtons (MN)": (1000000.0, "MN")
 }
 current_scale, current_unit = unit_map[force_display]
+
+# --- Private admin panel: visitor statistics (password protected) ----------
+with st.sidebar.expander("🔐 Admin"):
+    _admin_pw = st.text_input("Admin password", type="password", key="admin_pw")
+    if _admin_pw:
+        if _admin_pw == visitor_log._secret_get("admin_password"):
+            _records = visitor_log.get_visit_records()
+            if _records is None:
+                st.warning("Visitor logging is not configured yet. See VISITOR_TRACKING_SETUP.md.")
+            elif len(_records) == 0:
+                st.info("No visits recorded yet.")
+            else:
+                _vdf = pd.DataFrame(_records)
+                _c1, _c2 = st.columns(2)
+                _c1.metric("Total visits", len(_vdf))
+                if "session_id" in _vdf.columns:
+                    _c2.metric("Unique sessions", _vdf["session_id"].nunique())
+                st.dataframe(_vdf, use_container_width=True, hide_index=True)
+                st.download_button(
+                    "📥 Download visitor log (CSV)",
+                    data=_vdf.to_csv(index=False),
+                    file_name="visitor_log.csv",
+                    mime="text/csv",
+                )
+        else:
+            st.error("Incorrect password.")
 
 fig = go.Figure()
 
