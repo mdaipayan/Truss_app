@@ -1,6 +1,10 @@
 # Streamlit secrets — never commit real credentials
 .streamlit/secrets.toml
 
+# Logs / local scratch
+*.log
+app_log.txt
+
 # Python
 __pycache__/
 *.py[cod]
