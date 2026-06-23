@@ -2,6 +2,7 @@
 **A Pedagogical & Commercial-Grade Structural Analysis Tool**
 
 Developed by **Mr. D Mandal**, Assistant Professor, Department of Civil Engineering, KITS Ramtek.
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://trussapp.streamlit.app)
 
 ![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)
 ![Streamlit](https://img.shields.io/badge/Streamlit-1.35+-red.svg)
