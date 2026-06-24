@@ -26,7 +26,7 @@ def _user_field(field):
 # --- Google sign-in gate (only enforced when [auth] is configured) ---------
 _AUTH_ON = visitor_log.auth_configured() and hasattr(st, "user")
 if _AUTH_ON and not st.user.is_logged_in:
-    st.title("🏗️ 2D Truss Analysis Developed by D Mandal")
+    st.title("🏗️ 2D Truss Analysis & Structural Solver | Direct Stiffness Method")
     st.info("Please sign in with your Google account to access the Truss Suite.")
     st.button("🔐 Sign in with Google", type="primary", on_click=st.login)
     st.caption("Your name and email are recorded only so the developer can see who uses the tool.")
